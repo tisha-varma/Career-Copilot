@@ -7,8 +7,8 @@
 </p>
 
 <h1 align="center">🚀 Career Copilot AI</h1>
-https://career-copilot-ai-xlbe.onrender.com/
 
+<p align='center'> 🌐 Hosted Application: https://career-copilot-ai-xlbe.onrender.com/ </p>
 <p align="center">
   <strong>An Intelligent AI-Powered Career Guidance Platform</strong><br>
   Transform your job search with advanced resume analysis, personalized learning roadmaps, and AI-generated career assets.
