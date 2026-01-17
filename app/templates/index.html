@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Analysis & Career Planning</title>
+    <meta name="description" content="AI-powered resume analysis and personalized career guidance">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        },
+                        accent: {
+                            50: '#fdf4ff',
+                            100: '#fae8ff',
+                            200: '#f5d0fe',
+                            300: '#f0abfc',
+                            400: '#e879f9',
+                            500: '#d946ef',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 font-sans">
+    <!-- Decorative background elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div
+            class="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-primary-200/40 to-accent-200/40 rounded-full blur-3xl">
+        </div>
+        <div
+            class="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-primary-100/50 to-blue-200/50 rounded-full blur-3xl">
+        </div>
+    </div>
+
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-lg">
+            <!-- Logo/Brand -->
+            <div class="text-center mb-8">
+                <div
+                    class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/25 mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                </div>
+                <h1
+                    class="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                    Career Copilot AI
+                </h1>
+                <p class="mt-2 text-slate-500 text-sm">AI-powered resume analysis & career guidance</p>
+            </div>
+
+            <!-- Main Card -->
+            <div
+                class="backdrop-blur-xl bg-white/70 rounded-3xl shadow-xl shadow-slate-200/50 border border-white/50 p-8">
+                {% if error %}
+                <div class="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>{{ error }}</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <form action="/analyze" method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <!-- File Upload -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Upload Resume</label>
+                        <div class="upload-zone relative border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center transition-all duration-300 hover:border-primary-400 hover:bg-primary-50/30 cursor-pointer"
+                            id="dropZone">
+                            <input type="file" name="resume" accept=".pdf" required
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" id="fileInput">
+                            <div
+                                class="upload-icon mx-auto w-12 h-12 rounded-xl bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center mb-3 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-primary-500" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                                    </path>
+                                </svg>
+                            </div>
+                            <p class="text-slate-600 text-sm" id="fileName">Drop your PDF resume here or click to browse
+                            </p>
+                            <p class="text-slate-400 text-xs mt-1">PDF files only</p>
+                        </div>
+                    </div>
+
+                    <!-- Role Selection -->
+                    <div class="mb-8">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Target Role</label>
+                        <div class="relative">
+                            <select name="role" required
+                                class="w-full appearance-none bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-all duration-200">
+                                <option value="" disabled selected>Select your target role</option>
+                                <option value="Frontend Developer">Frontend Developer</option>
+                                <option value="Data Analyst">Data Analyst</option>
+                                <option value="Backend Developer">Backend Developer</option>
+                                <option value="Full Stack Developer">Full Stack Developer</option>
+                                <option value="Machine Learning Engineer">Machine Learning Engineer</option>
+                                <option value="DevOps Engineer">DevOps Engineer</option>
+                                <option value="Product Manager">Product Manager</option>
+                                <option value="UX Designer">UX Designer</option>
+                            </select>
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="submitBtn"
+                        class="w-full relative overflow-hidden bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg shadow-primary-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/30 hover:-translate-y-0.5 active:translate-y-0">
+                        <span class="relative z-10 flex items-center justify-center gap-2" id="btnText">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            Analyze Resume
+                        </span>
+                        <span class="hidden absolute inset-0 flex items-center justify-center" id="btnLoading">
+                            <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
+                            <span class="ml-2">Analyzing...</span>
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // File input handling
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const dropZone = document.getElementById('dropZone');
+        const uploadForm = document.getElementById('uploadForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const btnLoading = document.getElementById('btnLoading');
+
+        fileInput.addEventListener('change', function (e) {
+            if (this.files && this.files[0]) {
+                fileName.textContent = this.files[0].name;
+                dropZone.classList.add('border-primary-400', 'bg-primary-50/50');
+            }
+        });
+
+        // Form submission loading state
+        uploadForm.addEventListener('submit', function () {
+            btnText.classList.add('invisible');
+            btnLoading.classList.remove('hidden');
+            btnLoading.classList.add('flex');
+            submitBtn.disabled = true;
+        });
+
+        // Drag and drop visual feedback
+        dropZone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            this.classList.add('border-primary-400', 'bg-primary-50/50');
+        });
+
+        dropZone.addEventListener('dragleave', function (e) {
+            e.preventDefault();
+            if (!fileInput.files.length) {
+                this.classList.remove('border-primary-400', 'bg-primary-50/50');
+            }
+        });
+    </script>
+</body>
+
+</html>

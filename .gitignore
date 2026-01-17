@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test files
+.pytest_cache/
+htmlcov/
+
+# ChromaDB local storage
+chroma_data/
+
+# Uploaded files (if any)
+uploads/
+
+# Credentials (important!)
+credentials.json
+token.json
+*.pem
+*.key

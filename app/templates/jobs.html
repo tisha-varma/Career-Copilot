@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Opportunities - Career Copilot AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7' },
+                        accent: { 100: '#fae8ff', 500: '#d946ef' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 font-sans">
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div
+            class="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-indigo-200/40 to-purple-200/40 rounded-full blur-3xl">
+        </div>
+        <div
+            class="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-blue-100/50 to-indigo-200/50 rounded-full blur-3xl">
+        </div>
+    </div>
+
+    <div class="relative min-h-screen py-12 px-4">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-10">
+                <a href="/results"
+                    class="inline-flex items-center gap-2 text-slate-500 hover:text-primary-500 transition-colors mb-4">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    <span class="text-sm">Back to Analysis</span>
+                </a>
+                <h1
+                    class="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    Job Opportunities
+                </h1>
+                <p class="mt-2 text-slate-500">Find <span class="font-semibold text-indigo-600">{{ target_role }}</span>
+                    positions</p>
+            </div>
+
+            <!-- Job Platforms -->
+            <div
+                class="backdrop-blur-xl bg-white/70 rounded-3xl shadow-xl shadow-slate-200/50 border border-white/50 p-8 mb-6">
+                <h2 class="text-lg font-semibold text-slate-700 mb-6">Search on Top Platforms</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for key, job in job_search_urls.items() %}
+                    <a href="{{ job.url }}" target="_blank"
+                        class="flex items-center gap-4 p-5 rounded-2xl bg-white border border-slate-100 hover:border-indigo-300 hover:shadow-lg transition-all group">
+                        <div
+                            class="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">{{
+                                job.name }}</h3>
+                            <p class="text-sm text-slate-500">Search {{ target_role }} jobs</p>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-300 group-hover:text-indigo-500 ml-auto transition-colors"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Application Tips -->
+            {% if job_tips %}
+            <div
+                class="backdrop-blur-xl bg-white/70 rounded-3xl shadow-xl shadow-slate-200/50 border border-white/50 p-8 mb-6">
+                <h2 class="text-lg font-semibold text-slate-700 mb-4">💡 Application Tips for {{ target_role }}</h2>
+                <div class="space-y-3">
+                    {% for tip in job_tips %}
+                    <div class="flex items-start gap-3 p-4 bg-indigo-50 rounded-xl">
+                        <div class="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <p class="text-slate-700">{{ tip }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Your Strengths to Highlight -->
+            {% if strengths %}
+            <div
+                class="backdrop-blur-xl bg-white/70 rounded-3xl shadow-xl shadow-slate-200/50 border border-white/50 p-8">
+                <h2 class="text-lg font-semibold text-slate-700 mb-4">🌟 Highlight These in Your Application</h2>
+                <div class="flex flex-wrap gap-2">
+                    {% for strength in strengths %}
+                    <span
+                        class="px-4 py-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 rounded-full text-sm font-medium">
+                        {{ strength }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Navigation -->
+            <div class="flex justify-center gap-4 mt-8">
+                <a href="/results"
+                    class="px-6 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-medium transition-colors">
+                    ← Back to Analysis
+                </a>
+                <a href="/interview"
+                    class="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl text-white font-medium transition-colors">
+                    Interview Prep →
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
