@@ -252,16 +252,28 @@ Navigate to **http://127.0.0.1:8000**
 ## 📸 Demo
 
 ### Home Page
-Upload your resume (PDF) and select your target role from 8 career paths.
+<img width="916" height="873" alt="image" src="https://github.com/user-attachments/assets/f07eed60-fbdf-4811-b075-62c5e882088d" />
+
 
 ### Analysis Dashboard
-View your role fit score, strengths, skill gaps, and personalized learning roadmap.
+<img width="1246" height="1079" alt="image" src="https://github.com/user-attachments/assets/5e33be41-9ae7-4863-bd42-77d1c76a4f18" />
+<img width="1167" height="1079" alt="image" src="https://github.com/user-attachments/assets/1e8d0a2f-060e-4fce-8b6f-a508cbc89a39" />
+<img width="1147" height="730" alt="image" src="https://github.com/user-attachments/assets/995b9db1-9ec1-41ab-9992-10db985c8710" />
+
+### Job Opportunities
+<img width="1251" height="1042" alt="image" src="https://github.com/user-attachments/assets/ed1e370f-1ee4-4815-8640-75d6e3e318c0" />
+
+
 
 ### Cover Letter Generator
 Input job details and receive an AI-crafted cover letter tailored to your experience.
+<img width="1201" height="1044" alt="image" src="https://github.com/user-attachments/assets/e1fb3bb8-50a6-4b77-a92f-4ddfeafc0379" />
+<img width="1142" height="863" alt="image" src="https://github.com/user-attachments/assets/9caad97f-f7c3-429d-bc8d-ad24604d7378" />
+
 
 ### Interview Prep
 Practice with role-specific questions generated from YOUR resume.
+<img width="1167" height="1070" alt="image" src="https://github.com/user-attachments/assets/ca8dd995-59b0-4e67-a5dd-47be0acfc8f8" />
 
 ---
 
