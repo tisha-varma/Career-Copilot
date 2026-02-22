@@ -139,22 +139,53 @@ def semantic_search(collection: chromadb.Collection, query: str, n_results: int 
 
 
 def call_llama(prompt: str, system_prompt: str = None) -> str:
-    """Call LLaMA 3.1 via Groq API."""
-    client = get_groq_client()
+    """
+    Call LLaMA 3.3 via Groq API with automatic key rotation and retries.
+    """
+    from api_key_pool import get_api_pool
+    pool = get_api_pool()
+    last_error = None
     
-    messages = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
-    
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",  # or "llama-3.1-8b-instant" for faster
-        messages=messages,
-        temperature=0.7,
-        max_tokens=2048
-    )
-    
-    return response.choices[0].message.content
+    # Try once for every key in the pool
+    for attempt in range(max(pool.total_keys, 1)):
+        api_key = pool.get_key()
+        if not api_key:
+            # Fallback to env if pool is somehow empty
+            api_key = os.environ.get("GROQ_API_KEY")
+            if not api_key:
+                break
+        
+        try:
+            client = Groq(api_key=api_key)
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                temperature=0.7,
+                max_tokens=2048
+            )
+            
+            pool.mark_success(api_key)
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            last_error = e
+            error_msg = str(e).lower()
+            
+            # If it's a rate limit error, mark the key as limited and try the next one
+            if "rate_limit" in error_msg or "429" in error_msg:
+                pool.mark_rate_limited(api_key, cooldown_seconds=60)
+                print(f"[LLaMA] Key ...{api_key[-6:]} rate-limited, rotating...")
+                continue
+            else:
+                # Other errors (auth, validation) shouldn't be retried with same logic
+                raise
+                
+    raise Exception(f"Failed to call LLaMA after trying available keys. Last error: {last_error}")
 
 
 def extract_resume_info_llama(resume_text: str) -> Dict[str, Any]:
