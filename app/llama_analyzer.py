@@ -16,14 +16,26 @@ _chroma_client = None
 def get_embedding_model():
     global _embedding_model
     if _embedding_model is None:
+        # Use a custom cache directory that is likely to be writable (especially on Railway with volumes)
+        # We put it in app/data/model_cache
+        cache_dir = Path(__file__).parent / "data" / "model_cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        
         try:
             # fastembed uses ONNX Runtime (much lighter than PyTorch)
-            _embedding_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
-            print("✓ Loaded fastembed model (BGE-Small)")
+            _embedding_model = TextEmbedding(
+                model_name="BAAI/bge-small-en-v1.5",
+                cache_dir=str(cache_dir)
+            )
+            print(f"✓ Loaded fastembed model (BGE-Small) in {cache_dir}")
         except Exception as e:
-            print(f"Error loading embedding model: {e}")
-            # Fallback to local default if possible, but fastembed is preferred
-            _embedding_model = TextEmbedding()
+            print(f"Error loading embedding model: {e}. Trying default.")
+            try:
+                _embedding_model = TextEmbedding(cache_dir=str(cache_dir))
+            except Exception as e2:
+                 print(f"Critical error: Could not load embedding model: {e2}")
+                 # Last resort fallback (non-async mockup if absolutely necessary, but we need embeddings)
+                 raise
     return _embedding_model
 
 
@@ -578,16 +590,22 @@ Return a JSON array with exactly 10 questions:
         print("Interview Prep: Generating personalized questions (LLaMA)...")
         response = call_llama(prompt, system_prompt)
         
-        # Clean response
-        response = response.strip()
-        if response.startswith("```json"):
-            response = response[7:]
-        if response.startswith("```"):
-            response = response[3:]
-        if response.endswith("```"):
-            response = response[:-3]
+        # Robust JSON extraction
+        import re
+        json_match = re.search(r'\[\s*{.*}\s*\]', response, re.DOTALL)
+        if json_match:
+            questions_json = json_match.group(0)
+        else:
+            # Fallback to manual stripping if regex fails
+            questions_json = response.strip()
+            if questions_json.startswith("```json"):
+                questions_json = questions_json[7:]
+            if questions_json.startswith("```"):
+                questions_json = questions_json[3:]
+            if questions_json.endswith("```"):
+                questions_json = questions_json[:-3]
         
-        questions = json.loads(response.strip())
+        questions = json.loads(questions_json.strip())
         print(f"✓ Generated {len(questions) if isinstance(questions, list) else 0} personalized interview questions")
         
         return {
