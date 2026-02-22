@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cover Letter Generator - Career Copilot AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -38,18 +39,27 @@
             <!-- Header -->
             <div class="text-center mb-10">
                 <a href="/results"
-                    class="inline-flex items-center gap-2 text-slate-500 hover:text-emerald-500 transition-colors mb-4">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    class="group inline-flex items-center gap-1.5 text-slate-400 hover:text-emerald-600 transition-all duration-200 mb-4 float-left"
+                    title="Back to Analysis">
+                    <svg class="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                        </path>
                     </svg>
-                    <span class="text-sm">Back to Analysis</span>
+                    <span class="text-xs font-medium">Back</span>
                 </a>
                 <h1
                     class="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                     📝 Cover Letter Generator
                 </h1>
                 <p class="mt-2 text-slate-500">Generate a personalized cover letter from your resume</p>
+                {% if llm_powered %}
+                <span
+                    class="inline-flex items-center gap-1 mt-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    AI-Powered by LLaMA 3.3
+                </span>
+                {% endif %}
             </div>
 
             {% if error %}
@@ -73,6 +83,7 @@
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-slate-700 mb-2">Your Name</label>
                         <input type="text" name="candidate_name" required placeholder="Enter your full name"
+                            value="{{ form_candidate_name|default('', true) }}"
                             class="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all">
                     </div>
 
@@ -81,6 +92,7 @@
                         <label class="block text-sm font-medium text-slate-700 mb-2">Company Name</label>
                         <input type="text" name="company_name" required
                             placeholder="e.g., Google, Microsoft, Startup XYZ"
+                            value="{{ form_company_name|default('', true) }}"
                             class="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all">
                     </div>
 
@@ -88,7 +100,8 @@
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-slate-700 mb-2">Position / Job Title</label>
                         <input type="text" name="position" required
-                            placeholder="e.g., Software Engineer, Data Scientist" value="{{ target_role }}"
+                            placeholder="e.g., Software Engineer, Data Scientist"
+                            value="{{ form_position|default(target_role, true) }}"
                             class="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all">
                     </div>
 
@@ -105,7 +118,7 @@ We are looking for a Software Engineer with experience in Python, React, and clo
 - Strong problem-solving skills
 - Experience with REST APIs
 - Knowledge of databases..."
-                            class="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all resize-none"></textarea>
+                            class="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all resize-none">{{ form_job_description|default('', true) }}</textarea>
                     </div>
 
                     <!-- Info Box -->
@@ -115,9 +128,10 @@ We are looking for a Software Engineer with experience in Python, React, and clo
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span>The AI will analyze your resume and highlight projects, skills, and experience that
-                                match the job requirements. The cover letter will be strictly based on your resume
-                                content.</span>
+                            <span>The AI will analyze your resume and job description, match your specific projects and
+                                skills
+                                to the requirements, and generate a cover letter that references your actual experience.
+                                You'll also see a match analysis showing how your resume aligns with the JD.</span>
                         </p>
                     </div>
 
@@ -140,7 +154,7 @@ We are looking for a Software Engineer with experience in Python, React, and clo
                                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                                 </path>
                             </svg>
-                            <span class="ml-2">Generating...</span>
+                            <span class="ml-2">Analyzing resume & generating...</span>
                         </span>
                     </button>
                 </form>
@@ -177,12 +191,22 @@ We are looking for a Software Engineer with experience in Python, React, and clo
 
                 <!-- Cover Letter Preview -->
                 <div class="bg-white rounded-2xl border border-slate-200 p-8 shadow-inner">
-                    <div class="prose prose-slate max-w-none">
-                        {% for paragraph in cover_letter.split('\n\n') %}
+                    <div class="prose prose-slate max-w-none" id="coverLetterDisplay">
+                        {% set paragraphs = cover_letter.split('\n\n') %}
+                        {% if paragraphs | length > 1 %}
+                        {% for paragraph in paragraphs %}
                         {% if paragraph.strip() %}
-                        <p class="text-slate-700 leading-relaxed mb-4">{{ paragraph }}</p>
+                        <p class="text-slate-700 leading-relaxed mb-4">{{ paragraph.strip() }}</p>
                         {% endif %}
                         {% endfor %}
+                        {% else %}
+                        {% set lines = cover_letter.split('\n') %}
+                        {% for line in lines %}
+                        {% if line.strip() %}
+                        <p class="text-slate-700 leading-relaxed mb-4">{{ line.strip() }}</p>
+                        {% endif %}
+                        {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
 
@@ -197,6 +221,11 @@ We are looking for a Software Engineer with experience in Python, React, and clo
                         </svg>
                         Download PDF
                     </a>
+                    <button
+                        onclick="navigator.clipboard.writeText(document.getElementById('coverLetterText').innerText).then(() => { this.innerHTML = '✓ Copied!'; setTimeout(() => this.innerHTML = '📋 Copy Text', 2000); })"
+                        class="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all cursor-pointer">
+                        📋 Copy Text
+                    </button>
                     <a href="/cover-letter"
                         class="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +236,123 @@ We are looking for a Software Engineer with experience in Python, React, and clo
                         Generate Another
                     </a>
                 </div>
+                <!-- Hidden text for copy -->
+                <div id="coverLetterText" class="hidden">{{ cover_letter }}</div>
             </div>
+
+            <!-- Resume-to-JD Match Analysis -->
+            {% if match_analysis %}
+            <div
+                class="backdrop-blur-xl bg-white/70 rounded-3xl shadow-xl shadow-slate-200/50 border border-white/50 p-8 mb-6">
+                <div class="flex items-center gap-3 mb-6">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                            </path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-700">📊 Resume ↔ Job Description Match</h2>
+                        <p class="text-sm text-slate-500">How your resume aligns with the job requirements</p>
+                    </div>
+                </div>
+
+                <!-- Matched Requirements -->
+                {% if match_analysis.matched_requirements %}
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-slate-600 mb-3">Requirements Match</h3>
+                    <div class="space-y-2">
+                        {% for req in match_analysis.matched_requirements %}
+                        <div class="p-3 bg-white rounded-xl border border-slate-100">
+                            <div class="flex items-start gap-3">
+                                <span class="mt-0.5 flex-shrink-0">
+                                    {% if req.strength == 'strong' %}
+                                    <span
+                                        class="inline-flex w-6 h-6 rounded-full bg-green-100 items-center justify-center">
+                                        <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </span>
+                                    {% elif req.strength == 'moderate' %}
+                                    <span
+                                        class="inline-flex w-6 h-6 rounded-full bg-yellow-100 items-center justify-center">
+                                        <span class="text-yellow-600 text-xs font-bold">~</span>
+                                    </span>
+                                    {% else %}
+                                    <span
+                                        class="inline-flex w-6 h-6 rounded-full bg-orange-100 items-center justify-center">
+                                        <span class="text-orange-600 text-xs font-bold">△</span>
+                                    </span>
+                                    {% endif %}
+                                </span>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-slate-700">{{ req.jd_requirement }}</p>
+                                    <p class="text-xs text-slate-500 mt-1">↳ {{ req.resume_match }}</p>
+                                </div>
+                                <span class="px-2 py-0.5 text-xs rounded-full 
+                                    {% if req.strength == 'strong' %}bg-green-100 text-green-700
+                                    {% elif req.strength == 'moderate' %}bg-yellow-100 text-yellow-700
+                                    {% else %}bg-orange-100 text-orange-700{% endif %}">
+                                    {{ req.strength }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Key Projects Highlighted -->
+                {% if match_analysis.key_projects_highlighted %}
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-slate-600 mb-3">Projects Referenced in Cover Letter</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {% for proj in match_analysis.key_projects_highlighted %}
+                        <div
+                            class="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                            <p class="text-sm font-semibold text-emerald-700">{{ proj.project_name }}</p>
+                            <p class="text-xs text-slate-600 mt-1">{{ proj.relevance }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Skills Coverage -->
+                {% if match_analysis.skills_coverage %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {% if match_analysis.skills_coverage.matched %}
+                    <div class="p-4 bg-green-50 rounded-xl border border-green-100">
+                        <p class="text-xs font-semibold text-green-700 uppercase tracking-wider mb-2">✅ Skills You Have
+                        </p>
+                        <div class="flex flex-wrap gap-1">
+                            {% for skill in match_analysis.skills_coverage.matched %}
+                            <span class="px-2 py-0.5 bg-white text-green-700 rounded text-xs font-medium">{{ skill
+                                }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if match_analysis.skills_coverage.missing %}
+                    <div class="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                        <p class="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">📚 Skills to
+                            Highlight/Learn</p>
+                        <div class="flex flex-wrap gap-1">
+                            {% for skill in match_analysis.skills_coverage.missing %}
+                            <span class="px-2 py-0.5 bg-white text-amber-700 rounded text-xs font-medium">{{ skill
+                                }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
             {% endif %}
 
             <!-- Navigation -->

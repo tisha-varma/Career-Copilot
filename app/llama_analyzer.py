@@ -1,8 +1,3 @@
-"""
-LLaMA-Powered Resume Analyzer with BGE Embeddings
-Uses Groq API (LLaMA 3.1) + Sentence Transformers (BGE) + ChromaDB for semantic analysis
-"""
-
 import os
 import json
 from typing import Dict, List, Any, Optional
@@ -19,17 +14,16 @@ _embedding_model = None
 _chroma_client = None
 
 def get_embedding_model():
-    """Lazy load embedding model."""
     global _embedding_model
     if _embedding_model is None:
         try:
-            # Try BGE-Large first (best quality)
-            _embedding_model = SentenceTransformer('BAAI/bge-large-en-v1.5')
-            print("✓ Loaded BGE-Large embedding model")
-        except Exception:
-            # Fallback to smaller model
+            # Use MiniLM (fast, ~80MB, good quality)
             _embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
             print("✓ Loaded MiniLM embedding model")
+        except Exception:
+            # Fallback to BGE-Large (best quality but 1.34GB)
+            _embedding_model = SentenceTransformer('BAAI/bge-large-en-v1.5')
+            print("✓ Loaded BGE-Large embedding model")
     return _embedding_model
 
 
@@ -45,10 +39,14 @@ def get_chroma_client():
 
 
 def get_groq_client():
-    """Get Groq client for LLaMA access."""
-    api_key = os.environ.get("GROQ_API_KEY")
+    """Get Groq client using the API key pool."""
+    from api_key_pool import get_api_pool
+    pool = get_api_pool()
+    api_key = pool.get_key()
     if not api_key:
-        raise ValueError("GROQ_API_KEY environment variable not set")
+        api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("No API keys available")
     return Groq(api_key=api_key)
 
 
@@ -148,7 +146,7 @@ def call_llama(prompt: str, system_prompt: str = None) -> str:
     messages.append({"role": "user", "content": prompt})
     
     response = client.chat.completions.create(
-        model="llama-3.1-70b-versatile",  # or "llama-3.1-8b-instant" for faster
+        model="llama-3.3-70b-versatile",  # or "llama-3.1-8b-instant" for faster
         messages=messages,
         temperature=0.7,
         max_tokens=2048
@@ -235,10 +233,62 @@ Extract ONLY information present in the resume. Do not invent anything."""
         }
 
 
+import re
+
+def _format_cover_letter(text: str) -> str:
+    """Ensure the cover letter has proper paragraph breaks."""
+    if not text:
+        return text
+    
+    # If already has paragraph breaks (2+ newlines), just normalize them
+    if '\n\n' in text:
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        return '\n\n'.join(paragraphs)
+    
+    # If single newlines exist, try splitting on those
+    if '\n' in text:
+        lines = [l.strip() for l in text.split('\n') if l.strip()]
+        # If we get 3+ lines, they're probably paragraphs
+        if len(lines) >= 3:
+            return '\n\n'.join(lines)
+    
+    # No newlines at all — need to split intelligently
+    # Split after greeting
+    text = re.sub(r'(Dear\s+(?:Hiring Manager|[^,]+),)', r'\1\n\n', text)
+    # Split before closing
+    text = re.sub(r'\s+(Sincerely|Best regards|Regards|Yours truly|Warm regards|Thank you)', r'\n\n\1', text, flags=re.IGNORECASE)
+    
+    # Now split the body into paragraphs roughly every 3-4 sentences
+    parts = text.split('\n\n')
+    result = []
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        # If a body paragraph is very long (>500 chars), split it
+        if len(part) > 500:
+            sentences = re.split(r'(?<=[.!?])\s+', part)
+            chunk = []
+            chunk_len = 0
+            for s in sentences:
+                chunk.append(s)
+                chunk_len += len(s)
+                if chunk_len > 300 and len(chunk) >= 3:
+                    result.append(' '.join(chunk))
+                    chunk = []
+                    chunk_len = 0
+            if chunk:
+                result.append(' '.join(chunk))
+        else:
+            result.append(part)
+    
+    return '\n\n'.join(result)
+
+
 def generate_cover_letter_llama(resume_text: str, job_description: str, 
                                  company_name: str, position: str,
                                  candidate_name: str) -> Dict[str, Any]:
-    """Generate personalized cover letter using LLaMA + embeddings."""
+    """Generate deeply personalized cover letter using LLaMA + embeddings."""
     
     # Create session ID for embeddings
     session_id = hashlib.md5(resume_text[:100].encode()).hexdigest()
@@ -246,86 +296,158 @@ def generate_cover_letter_llama(resume_text: str, job_description: str,
     # Create embeddings for semantic search
     collection = create_resume_embeddings(resume_text, session_id)
     
-    # Find most relevant resume sections for this job
-    relevant_projects = semantic_search(collection, f"projects {job_description[:200]}", 3)
-    relevant_skills = semantic_search(collection, f"skills technologies {job_description[:200]}", 3)
-    relevant_experience = semantic_search(collection, f"experience work {job_description[:200]}", 3)
+    # Semantic search tailored to the job description
+    relevant_projects = semantic_search(collection, f"projects {job_description[:300]}", 5)
+    relevant_skills = semantic_search(collection, f"skills technologies {job_description[:300]}", 4)
+    relevant_experience = semantic_search(collection, f"experience work achievements {job_description[:300]}", 4)
+    relevant_impact = semantic_search(collection, f"results impact metrics improved reduced increased", 3)
     
     # Extract structured info using LLaMA
+    print("Cover Letter: Extracting resume details (LLaMA)...")
     resume_info = extract_resume_info_llama(resume_text)
     
-    # Build context for cover letter
-    context = f"""
-CANDIDATE: {candidate_name}
+    # Build rich context
+    projects_detail = json.dumps(resume_info.get("projects", []), indent=2)
+    experience_detail = json.dumps(resume_info.get("experience", []), indent=2)
+    skills_detail = json.dumps(resume_info.get("skills", {}), indent=2)
+    achievements = resume_info.get("achievements", [])
+    
+    system_prompt = """You are an elite cover letter writer who creates cover letters that get interviews.
+Your cover letters are HIGHLY SPECIFIC — they reference exact project names, technologies, metrics, 
+and achievements from the candidate's resume and precisely map them to job requirements.
 
-RELEVANT PROJECTS FROM RESUME:
+You NEVER write generic phrases like "I have relevant experience" — instead you write things like
+"My work on the Career Copilot AI project, where I built a FastAPI backend with 4-step agentic LLM workflow, 
+directly maps to your need for candidates experienced in building production AI systems."
+
+ALWAYS respond with valid JSON only."""
+
+    prompt = f"""Create a deeply personalized cover letter AND a match analysis for {candidate_name} applying to {company_name} for {position}.
+
+=== CANDIDATE'S PROJECTS ===
+{projects_detail}
+
+=== CANDIDATE'S EXPERIENCE ===
+{experience_detail}
+
+=== CANDIDATE'S SKILLS ===
+{skills_detail}
+
+=== CANDIDATE'S ACHIEVEMENTS ===
+{json.dumps(achievements, indent=2)}
+
+=== RELEVANT PROJECT SECTIONS FROM RESUME ===
 {chr(10).join(relevant_projects)}
 
-RELEVANT SKILLS:
+=== RELEVANT SKILLS SECTIONS ===
 {chr(10).join(relevant_skills)}
 
-RELEVANT EXPERIENCE:
+=== RELEVANT EXPERIENCE SECTIONS ===
 {chr(10).join(relevant_experience)}
 
-EXTRACTED RESUME INFO:
-{json.dumps(resume_info, indent=2)}
-"""
+=== IMPACT & METRICS FROM RESUME ===
+{chr(10).join(relevant_impact)}
 
-    system_prompt = """You are an expert cover letter writer. Write compelling, personalized cover letters 
-that highlight specific projects, skills, and achievements from the candidate's resume.
-Be professional but engaging. Always reference specific details from the resume."""
+=== JOB DESCRIPTION ===
+{job_description[:2500]}
 
-    prompt = f"""Write a detailed cover letter for {candidate_name} applying to {company_name} for the {position} role.
-
-{context}
-
-JOB DESCRIPTION:
-{job_description[:2000]}
-
-Write a 4-5 paragraph cover letter that:
-1. Opens with enthusiasm for the {position} role at {company_name}
-2. Highlights 2-3 SPECIFIC projects by name with technologies used
-3. Mentions relevant technical skills and experience
-4. References any notable achievements
-5. Closes with a call to action
-
-IMPORTANT:
-- Use ONLY information from the resume context above
-- Mention specific project names
-- Include specific technologies
-- Reference specific achievements
-- Do NOT use placeholder text
-
-Write the cover letter now:"""
+Return a JSON object with this EXACT structure:
+{{
+    "cover_letter": "The full cover letter text (4-5 paragraphs). Rules:\\n- Paragraph 1: Strong opening mentioning the specific role and company, plus ONE compelling achievement from the resume\\n- Paragraph 2: Reference 2 SPECIFIC projects BY NAME with exact technologies used, explaining how they match the JD requirements\\n- Paragraph 3: Highlight technical skills and another specific project/experience that demonstrates a key JD requirement\\n- Paragraph 4: (Optional) Reference any measurable achievements, metrics, or impact numbers from the resume\\n- Paragraph 5: Confident close with call to action\\n\\nStart with 'Dear Hiring Manager,' and end with 'Sincerely,\\n{candidate_name}'\\nUse ACTUAL project names and technologies from the resume. Never use placeholders.",
+    "match_analysis": {{
+        "matched_requirements": [
+            {{
+                "jd_requirement": "A specific requirement from the job description",
+                "resume_match": "The specific project, skill, or experience from the resume that matches this",
+                "strength": "strong | moderate | partial"
+            }}
+        ],
+        "key_projects_highlighted": [
+            {{
+                "project_name": "Name of the project from resume",
+                "relevance": "Why this project is relevant to the job"
+            }}
+        ],
+        "skills_coverage": {{
+            "matched": ["Skills from JD that the candidate has"],
+            "missing": ["Skills from JD that the candidate should learn"]
+        }}
+    }}
+}}"""
 
     try:
-        cover_letter = call_llama(prompt, system_prompt)
+        print("Cover Letter: Generating personalized letter (LLaMA)...")
+        response = call_llama(prompt, system_prompt)
+        
+        # Clean response
+        response = response.strip()
+        if response.startswith("```json"):
+            response = response[7:]
+        if response.startswith("```"):
+            response = response[3:]
+        if response.endswith("```"):
+            response = response[:-3]
+        
+        result = json.loads(response.strip())
+        print("✓ Cover letter generated (powered by LLaMA 3.3)")
+        
+        # Post-process: ensure proper paragraph formatting
+        cover_text = result.get("cover_letter", "").strip()
+        cover_text = _format_cover_letter(cover_text)
         
         return {
             "success": True,
-            "cover_letter": cover_letter.strip(),
+            "cover_letter": cover_text,
+            "match_analysis": result.get("match_analysis", {}),
             "company": company_name,
             "position": position,
             "candidate_name": candidate_name,
             "resume_info": resume_info,
-            "llm_model": "llama-3.1-70b"
+            "llm_model": "llama-3.3-70b",
+            "llm_powered": True
         }
         
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "cover_letter": f"Error generating cover letter: {str(e)}",
-            "company": company_name,
-            "position": position,
-            "candidate_name": candidate_name
-        }
+        print(f"Cover letter JSON parse failed, trying plain text: {e}")
+        # If JSON fails, try generating plain text cover letter
+        try:
+            plain_prompt = f"""Write a cover letter for {candidate_name} applying to {company_name} for {position}.
+
+RESUME PROJECTS: {projects_detail}
+RESUME SKILLS: {skills_detail}
+JOB DESCRIPTION: {job_description[:2000]}
+
+Write 4-5 paragraphs referencing SPECIFIC project names and technologies from the resume.
+Start with 'Dear Hiring Manager,' and end with 'Sincerely,\\n{candidate_name}'"""
+            
+            cover_letter = call_llama(plain_prompt, "You are an expert cover letter writer. Be specific — reference actual project names and technologies.")
+            
+            return {
+                "success": True,
+                "cover_letter": cover_letter.strip(),
+                "match_analysis": {},
+                "company": company_name,
+                "position": position,
+                "candidate_name": candidate_name,
+                "llm_model": "llama-3.3-70b",
+                "llm_powered": True
+            }
+        except Exception as e2:
+            return {
+                "success": False,
+                "error": str(e2),
+                "cover_letter": f"Error generating cover letter: {str(e2)}",
+                "match_analysis": {},
+                "company": company_name,
+                "position": position,
+                "candidate_name": candidate_name
+            }
 
 
 def generate_interview_questions_llama(resume_text: str, target_role: str,
                                         strengths: List[str] = None,
                                         skill_gaps: Dict = None) -> Dict[str, Any]:
-    """Generate personalized interview questions using LLaMA + embeddings."""
+    """Generate deeply personalized interview questions using LLaMA + embeddings."""
     
     # Create session ID for embeddings
     session_id = hashlib.md5(resume_text[:100].encode()).hexdigest()
@@ -333,51 +455,94 @@ def generate_interview_questions_llama(resume_text: str, target_role: str,
     # Create embeddings
     collection = create_resume_embeddings(resume_text, session_id)
     
-    # Extract resume info
+    # Extract structured resume info using LLaMA
+    print("Interview Prep: Extracting resume details (LLaMA)...")
     resume_info = extract_resume_info_llama(resume_text)
     
-    # Find relevant sections
-    relevant_projects = semantic_search(collection, f"projects technical implementation", 4)
-    relevant_experience = semantic_search(collection, f"work experience achievements", 3)
+    # Semantic search for different aspects of the resume
+    relevant_projects = semantic_search(collection, "projects technical implementation architecture design", 5)
+    relevant_experience = semantic_search(collection, "work experience role achievements impact metrics", 4)
+    relevant_tech = semantic_search(collection, "technologies frameworks tools programming languages", 4)
+    relevant_challenges = semantic_search(collection, "challenges problems solved improved optimized", 3)
     
-    system_prompt = """You are an expert technical interviewer. Generate specific, detailed interview questions 
-based on the candidate's resume. Questions must reference SPECIFIC projects, technologies, and achievements.
-Always respond with valid JSON."""
+    # Build rich project context for the prompt
+    projects_detail = json.dumps(resume_info.get("projects", []), indent=2)
+    experience_detail = json.dumps(resume_info.get("experience", []), indent=2)
+    skills_detail = json.dumps(resume_info.get("skills", {}), indent=2)
+    
+    system_prompt = """You are a senior technical interviewer at a top tech company. Your job is to generate 
+HIGHLY SPECIFIC and DEEPLY PERSONALIZED interview questions based on the candidate's actual resume.
 
-    prompt = f"""Generate 8 personalized interview questions for a {target_role} candidate.
+CRITICAL RULES:
+- Every question MUST reference a SPECIFIC project name, technology, company, or achievement from the resume
+- Questions should probe the candidate's DEPTH of understanding, not surface-level knowledge
+- Ask about WHY they made certain technical decisions, not just WHAT they built
+- Include questions about trade-offs, challenges faced, and lessons learned
+- Reference actual metrics, numbers, or outcomes mentioned in the resume
+- NEVER generate generic questions that could apply to any candidate
 
-RESUME INFORMATION:
-{json.dumps(resume_info, indent=2)}
+Always respond with valid JSON only."""
 
-RELEVANT PROJECTS:
+    prompt = f"""Generate 10 deeply personalized interview questions for this candidate applying for a {target_role} role.
+
+=== CANDIDATE'S PROJECTS (with details) ===
+{projects_detail}
+
+=== CANDIDATE'S WORK EXPERIENCE ===
+{experience_detail}
+
+=== CANDIDATE'S SKILLS ===
+{skills_detail}
+
+=== RELEVANT PROJECT DETAILS FROM RESUME ===
 {chr(10).join(relevant_projects)}
 
-RELEVANT EXPERIENCE:
+=== WORK EXPERIENCE HIGHLIGHTS ===
 {chr(10).join(relevant_experience)}
 
-{f"STRENGTHS: {strengths}" if strengths else ""}
-{f"SKILL GAPS: {json.dumps(skill_gaps)}" if skill_gaps else ""}
+=== TECHNOLOGIES MENTIONED ===
+{chr(10).join(relevant_tech)}
 
-Generate questions that:
-1. Ask about SPECIFIC projects by name
-2. Probe technical decisions and implementations
-3. Explore achievements and metrics
-4. Test problem-solving abilities
-5. Assess cultural fit
+=== CHALLENGES & ACHIEVEMENTS ===
+{chr(10).join(relevant_challenges)}
 
-Return a JSON array:
+{f"IDENTIFIED STRENGTHS: {strengths}" if strengths else ""}
+{f"SKILL GAPS TO PROBE: {json.dumps(skill_gaps)}" if skill_gaps else ""}
+
+=== QUESTION CATEGORIES (generate exactly this distribution) ===
+1. PROJECT DEEP-DIVE (4 questions): Ask about specific projects BY NAME. Probe:
+   - "In your [PROJECT NAME] project, you used [TECH]. Why did you choose [TECH] over alternatives like [ALT]?"
+   - "Walk me through the architecture of [PROJECT NAME]. How did you handle [SPECIFIC CHALLENGE]?"
+   - "You mentioned [SPECIFIC FEATURE] in [PROJECT NAME]. How did you implement that technically?"
+   - "What was the most difficult bug or challenge you faced in [PROJECT NAME]?"
+
+2. TECHNICAL ARCHITECTURE (2 questions): Ask about system design decisions:
+   - "In [PROJECT], you combined [TECH1] and [TECH2]. How did these components communicate?"
+   - "If you had to scale [PROJECT NAME] to 10x users, what would you change?"
+
+3. IMPACT & METRICS (2 questions): Ask about measurable outcomes:
+   - "You mentioned [SPECIFIC METRIC/ACHIEVEMENT]. How did you measure that?"
+   - "What was the business impact of [PROJECT/FEATURE]?"
+
+4. CHALLENGES & GROWTH (1 question): Ask about learning from difficulties:
+   - "What technology in [PROJECT] was new to you? How did you get up to speed?"
+
+5. ROLE FIT (1 question): Connect their experience to the {target_role} role:
+   - "How does your experience with [SPECIFIC TECH/PROJECT] prepare you for [ASPECT OF TARGET ROLE]?"
+
+Return a JSON array with exactly 10 questions:
 [
   {{
-    "question": "Tell me about your [SPECIFIC PROJECT NAME] project. What challenges did you face with [SPECIFIC TECH]?",
-    "category": "Project Experience",
-    "source": "Based on [project name] from resume",
-    "tip": "Discuss technical implementation, challenges, and measurable outcomes"
+    "question": "The actual personalized question referencing specific resume details",
+    "category": "Project Deep-Dive | Technical Architecture | Impact & Metrics | Challenges & Growth | Role Fit",
+    "source": "Based on [specific project/experience/achievement] from resume",
+    "project_context": "Brief context about what in the resume triggered this question",
+    "tip": "Specific advice on how to answer THIS question well, referencing what they should highlight"
   }}
-]
-
-Generate 8 questions covering: Projects (3), Technical Skills (2), Experience (2), Growth (1)."""
+]"""
 
     try:
+        print("Interview Prep: Generating personalized questions (LLaMA)...")
         response = call_llama(prompt, system_prompt)
         
         # Clean response
@@ -390,6 +555,7 @@ Generate 8 questions covering: Projects (3), Technical Skills (2), Experience (2
             response = response[:-3]
         
         questions = json.loads(response.strip())
+        print(f"✓ Generated {len(questions) if isinstance(questions, list) else 0} personalized interview questions")
         
         return {
             "resume_analysis": {
@@ -401,7 +567,7 @@ Generate 8 questions covering: Projects (3), Technical Skills (2), Experience (2
             },
             "personalized_questions": questions if isinstance(questions, list) else [],
             "llm_powered": True,
-            "llm_model": "llama-3.1-70b"
+            "llm_model": "llama-3.3-70b"
         }
         
     except Exception as e:

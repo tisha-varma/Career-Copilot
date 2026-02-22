@@ -32,11 +32,12 @@ htmlcov/
 # ChromaDB local storage
 chroma_data/
 
-# Uploaded files (if any)
-uploads/
+# Uploaded files and session data
+app/data/
 
 # Credentials (important!)
 credentials.json
 token.json
 *.pem
 *.key
+app/keys

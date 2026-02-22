@@ -1,6 +1,6 @@
 """
 Prompts Module
-Contains all Gemini API prompts for the agentic resume analysis
+Contains all Groq/LLaMA prompts for the agentic resume analysis
 """
 
 # System prompt for the career analysis agent

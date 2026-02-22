@@ -1,12 +1,12 @@
 """
 Agent Module
-Orchestrates the agentic resume analysis using Google Gemini API
+Orchestrates the agentic resume analysis using Groq API (LLaMA 3.1)
 Includes demo mode fallback when API is unavailable
 """
 
 import os
 import json
-import httpx
+from groq import Groq
 from prompts import (
     SYSTEM_PROMPT,
     PROMPT_RESUME_UNDERSTANDING,
@@ -14,22 +14,25 @@ from prompts import (
     PROMPT_LEARNING_ROADMAP,
     PROMPT_REFLECTION
 )
+from api_key_pool import get_api_pool
 
 
 # Demo mode flag - set to True if API fails
 DEMO_MODE = False
 
 
-def get_api_key():
-    """Get the Gemini API key from environment."""
-    api_key = os.environ.get("GEMINI_API_KEY")
+def get_groq_client(api_key: str = None):
+    """Get Groq client. Uses provided key or fetches from pool."""
     if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable is not set")
-    return api_key
+        pool = get_api_pool()
+        api_key = pool.get_key()
+        if not api_key:
+            raise ValueError("No API keys available (all rate-limited)")
+    return Groq(api_key=api_key)
 
 
 def parse_json_response(response_text: str) -> dict:
-    """Parse JSON from Gemini response, handling potential markdown formatting."""
+    """Parse JSON from LLM response, handling potential markdown formatting."""
     text = response_text.strip()
     
     if text.startswith("```json"):
@@ -43,65 +46,47 @@ def parse_json_response(response_text: str) -> dict:
     return json.loads(text.strip())
 
 
-def call_gemini(prompt: str) -> str:
-    """Call the Gemini API using REST API directly."""
-    import time
-    
-    api_key = get_api_key()
-    
-    # Try multiple models - using models that should work
-    models = [
-        "gemini-1.5-flash",
-        "gemini-1.5-pro", 
-        "gemini-pro",
-        "gemini-1.0-pro"
-    ]
-    
-    payload = {
-        "contents": [{"parts": [{"text": f"{SYSTEM_PROMPT}\n\n{prompt}"}]}],
-        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
-    }
-    
+def call_llm(prompt: str) -> str:
+    """
+    Call LLaMA 3.3 via Groq API with automatic key rotation.
+    Retries with different keys on rate limit errors.
+    """
+    pool = get_api_pool()
     last_error = None
     
-    for model in models:
-        for attempt in range(2):
-            try:
-                # Try v1beta first (more models available)
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-                
-                with httpx.Client(timeout=60.0) as client:
-                    response = client.post(url, json=payload, headers={"Content-Type": "application/json"})
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    return result["candidates"][0]["content"]["parts"][0]["text"]
-                
-                # Check for quota error - this means billing needed
-                if response.status_code == 429:
-                    error_data = response.json()
-                    error_msg = str(error_data)
-                    if "limit: 0" in error_msg or "quota" in error_msg.lower():
-                        # Quota is 0, enable demo mode
-                        global DEMO_MODE
-                        DEMO_MODE = True
-                        raise Exception("DEMO_MODE_NEEDED")
-                    # Rate limited but has quota - wait and retry
-                    time.sleep(25)
-                    continue
-                
-                # 404 = model not found, try next
-                if response.status_code == 404:
-                    break
-                    
-                last_error = f"API {response.status_code}: {response.text[:200]}"
-                
-            except Exception as e:
-                if "DEMO_MODE_NEEDED" in str(e):
-                    raise
-                last_error = str(e)
+    # Try up to pool.total_keys times (one attempt per key)
+    for attempt in range(max(pool.total_keys, 1)):
+        api_key = pool.get_key()
+        if not api_key:
+            break
+        
+        try:
+            client = Groq(api_key=api_key)
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=2048
+            )
+            pool.mark_success(api_key)
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            last_error = e
+            error_msg = str(e).lower()
+            
+            if "rate_limit" in error_msg or "429" in error_msg:
+                pool.mark_rate_limited(api_key, cooldown_seconds=60)
+                print(f"[LLM] Key ...{api_key[-6:]} rate-limited, trying next key...")
+                continue
+            else:
+                # Non-rate-limit error, don't retry
+                raise
     
-    raise Exception(last_error or "All models failed")
+    raise Exception(f"All API keys exhausted. Last error: {last_error}")
 
 
 def get_demo_analysis(resume_text: str, target_role: str) -> dict:
@@ -233,16 +218,17 @@ def get_demo_analysis(resume_text: str, target_role: str) -> dict:
 
 
 async def run_agent(resume_text: str, target_role: str) -> dict:
-    """Run the agentic analysis loop."""
+    """Run the agentic analysis loop using Groq/LLaMA."""
     
     try:
-        # Try to use Gemini API
         # Step 1: Understand the resume
+        print("Agent Step 1: Resume Understanding (LLaMA 3.1)...")
         prompt1 = PROMPT_RESUME_UNDERSTANDING.format(resume_text=resume_text)
-        response1 = call_gemini(prompt1)
+        response1 = call_llm(prompt1)
         resume_understanding = parse_json_response(response1)
         
         # Step 2: Analyze role fit
+        print("Agent Step 2: Role Fit Analysis (LLaMA 3.1)...")
         prompt2 = PROMPT_ROLE_FIT_ANALYSIS.format(
             skills=", ".join(resume_understanding.get("skills", [])),
             education_level=resume_understanding.get("education_level", "Unknown"),
@@ -250,26 +236,30 @@ async def run_agent(resume_text: str, target_role: str) -> dict:
             strengths=", ".join(resume_understanding.get("strengths", [])),
             target_role=target_role
         )
-        response2 = call_gemini(prompt2)
+        response2 = call_llm(prompt2)
         role_fit_analysis = parse_json_response(response2)
         
         # Step 3: Generate learning roadmap
+        print("Agent Step 3: Learning Roadmap (LLaMA 3.1)...")
         prompt3 = PROMPT_LEARNING_ROADMAP.format(
             missing_core_skills=", ".join(role_fit_analysis.get("missing_core_skills", [])),
             missing_supporting_skills=", ".join(role_fit_analysis.get("missing_supporting_skills", [])),
             target_role=target_role
         )
-        response3 = call_gemini(prompt3)
+        response3 = call_llm(prompt3)
         learning_roadmap = parse_json_response(response3)
         
         # Step 4: Reflection
+        print("Agent Step 4: Reflection (LLaMA 3.1)...")
         prompt4 = PROMPT_REFLECTION.format(
             role_fit_score=role_fit_analysis.get("role_fit_score", 0),
             roadmap_count=len(learning_roadmap.get("roadmap", [])),
             target_role=target_role
         )
-        response4 = call_gemini(prompt4)
+        response4 = call_llm(prompt4)
         reflection = parse_json_response(response4)
+        
+        print("✓ Agent analysis complete (powered by LLaMA 3.1 via Groq)")
         
         # Combine all results
         return {
@@ -286,6 +276,8 @@ async def run_agent(resume_text: str, target_role: str) -> dict:
         }
         
     except Exception as e:
-        # If API fails, use demo mode
-        print(f"API failed ({e}), using demo mode...")
+        # If Groq API fails, use demo mode
+        print(f"Groq API failed ({e}), using demo mode...")
+        global DEMO_MODE
+        DEMO_MODE = True
         return get_demo_analysis(resume_text, target_role)
