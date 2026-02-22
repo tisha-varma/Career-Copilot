@@ -511,6 +511,47 @@ async def export_feedback():
     )
 
 
+@app.get("/admin/resumes")
+async def list_resumes():
+    """List all resumes uploaded to the system (Admin only)."""
+    from resume_storage import get_recent_uploads
+    uploads = get_recent_uploads(100)
+    
+    html = f"""
+    <html>
+        <head>
+            <title>Resume Admin</title>
+            <style>
+                body {{ font-family: sans-serif; padding: 20px; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                th, td {{ padding: 10px; border: 1px solid #ddd; text-align: left; }}
+                th {{ background: #f4f4f4; }}
+                .container {{ max-width: 1000px; margin: auto; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>📁 Uploaded Resumes</h1>
+                <p>All resumes are stored in <code>app/data/resumes/</code></p>
+                <table>
+                    <tr>
+                        <th>Date</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Email</th>
+                        <th>File</th>
+                    </tr>
+                    {"".join([f"<tr><td>{u['uploaded_at'][:10]}</td><td>{u['detected_name']}</td><td>{u['target_role']}</td><td>{u['detected_email']}</td><td>{u['filename']}</td></tr>" for u in uploads])}
+                </table>
+                <br>
+                <a href="/export-feedback-csv">📊 Download Feedback Excel (CSV)</a>
+            </div>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html)
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
