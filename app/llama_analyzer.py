@@ -254,19 +254,24 @@ Extract ONLY information present in the resume. Do not invent anything."""
     try:
         response = call_llama(prompt, system_prompt)
         
-        # Clean response
-        response = response.strip()
-        if response.startswith("```json"):
-            response = response[7:]
-        if response.startswith("```"):
-            response = response[3:]
-        if response.endswith("```"):
-            response = response[:-3]
+        # Robust JSON extraction
+        import re
+        json_match = re.search(r'(\{.*\})', response, re.DOTALL)
+        if json_match:
+            json_blob = json_match.group(1)
+        else:
+            json_blob = response.strip()
+            if json_blob.startswith("```json"):
+                json_blob = json_blob[7:]
+            if json_blob.startswith("```"):
+                json_blob = json_blob[3:]
+            if json_blob.endswith("```"):
+                json_blob = json_blob[:-3]
         
-        return json.loads(response.strip())
+        return json.loads(json_blob.strip())
         
     except Exception as e:
-        print(f"LLaMA extraction error: {e}")
+        print(f"LLaMA extraction error: {e}. Response was: {response[:200]}...")
         return {
             "name": "",
             "projects": [],
@@ -592,9 +597,10 @@ Return a JSON array with exactly 10 questions:
         
         # Robust JSON extraction
         import re
-        json_match = re.search(r'\[\s*{.*}\s*\]', response, re.DOTALL)
+        # Find the first [ and the last ] and everything in between
+        json_match = re.search(r'(\[.*\])', response, re.DOTALL)
         if json_match:
-            questions_json = json_match.group(0)
+            questions_json = json_match.group(1)
         else:
             # Fallback to manual stripping if regex fails
             questions_json = response.strip()
