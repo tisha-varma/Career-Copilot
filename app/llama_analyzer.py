@@ -1,6 +1,7 @@
 import os
 import json
 from typing import Dict, List, Any, Optional
+from pathlib import Path
 from groq import Groq
 from fastembed import TextEmbedding
 import chromadb
@@ -453,45 +454,32 @@ Return a JSON object with this EXACT structure:
             "position": position,
             "candidate_name": candidate_name,
             "resume_info": resume_info,
-            "llm_model": "llama-3.3-70b",
-            "llm_powered": True
         }
-        
     except Exception as e:
-        print(f"Cover letter JSON parse failed, trying plain text: {e}")
-        # If JSON fails, try generating plain text cover letter
+        print(f"Cover letter error: {e}")
         try:
-            plain_prompt = f"""Write a cover letter for {candidate_name} applying to {company_name} for {position}.
-
-RESUME PROJECTS: {projects_detail}
-RESUME SKILLS: {skills_detail}
-JOB DESCRIPTION: {job_description[:2000]}
-
-Write 4-5 paragraphs referencing SPECIFIC project names and technologies from the resume.
-Start with 'Dear Hiring Manager,' and end with 'Sincerely,\\n{candidate_name}'"""
+            # Try to recover just the text if JSON failed but it looks like a letter
+            if "Dear" in response and "Sincerely" in response:
+                return {
+                    "success": True,
+                    "cover_letter": _format_cover_letter(response),
+                    "match_analysis": {},
+                    "company": company_name,
+                    "position": position,
+                    "candidate_name": candidate_name
+                }
+        except:
+            pass
             
-            cover_letter = call_llama(plain_prompt, "You are an expert cover letter writer. Be specific — reference actual project names and technologies.")
-            
-            return {
-                "success": True,
-                "cover_letter": cover_letter.strip(),
-                "match_analysis": {},
-                "company": company_name,
-                "position": position,
-                "candidate_name": candidate_name,
-                "llm_model": "llama-3.3-70b",
-                "llm_powered": True
-            }
-        except Exception as e2:
-            return {
-                "success": False,
-                "error": str(e2),
-                "cover_letter": f"Error generating cover letter: {str(e2)}",
-                "match_analysis": {},
-                "company": company_name,
-                "position": position,
-                "candidate_name": candidate_name
-            }
+        return {
+            "success": False,
+            "error": str(e),
+            "cover_letter": f"Error generating cover letter: {str(e)}",
+            "match_analysis": {},
+            "company": company_name,
+            "position": position,
+            "candidate_name": candidate_name
+        }
 
 
 def generate_interview_questions_llama(resume_text: str, target_role: str,
