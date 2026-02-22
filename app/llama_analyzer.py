@@ -2,14 +2,14 @@ import os
 import json
 from typing import Dict, List, Any, Optional
 from groq import Groq
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 import chromadb
 from chromadb.config import Settings
 import hashlib
 
 
-# Initialize embedding model (BGE-Large for high quality)
-# Using all-MiniLM-L6-v2 as fallback (faster, still good quality)
+# Initialize embedding model (Fast, lightweight, optimized for CPU)
+# Using BGE-Small (excellent quality, very small footprint)
 _embedding_model = None
 _chroma_client = None
 
@@ -17,13 +17,13 @@ def get_embedding_model():
     global _embedding_model
     if _embedding_model is None:
         try:
-            # Use MiniLM (fast, ~80MB, good quality)
-            _embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            print("✓ Loaded MiniLM embedding model")
-        except Exception:
-            # Fallback to BGE-Large (best quality but 1.34GB)
-            _embedding_model = SentenceTransformer('BAAI/bge-large-en-v1.5')
-            print("✓ Loaded BGE-Large embedding model")
+            # fastembed uses ONNX Runtime (much lighter than PyTorch)
+            _embedding_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+            print("✓ Loaded fastembed model (BGE-Small)")
+        except Exception as e:
+            print(f"Error loading embedding model: {e}")
+            # Fallback to local default if possible, but fastembed is preferred
+            _embedding_model = TextEmbedding()
     return _embedding_model
 
 
@@ -110,8 +110,9 @@ def create_resume_embeddings(resume_text: str, session_id: str) -> chromadb.Coll
     if not chunks:
         return collection
     
-    # Create embeddings
-    embeddings = model.encode(chunks, show_progress_bar=False).tolist()
+    # Create embeddings (fastembed model.embed returns a generator)
+    # Convert to list of lists for ChromaDB
+    embeddings = [e.tolist() for e in list(model.embed(chunks))]
     
     # Add to collection
     collection.add(
@@ -126,10 +127,11 @@ def create_resume_embeddings(resume_text: str, session_id: str) -> chromadb.Coll
 def semantic_search(collection: chromadb.Collection, query: str, n_results: int = 5) -> List[str]:
     """Search for relevant resume chunks using semantic similarity."""
     model = get_embedding_model()
-    query_embedding = model.encode([query], show_progress_bar=False).tolist()
+    # model.embed returns a generator, even for a single query
+    query_embeddings = [e.tolist() for e in list(model.embed([query]))]
     
     results = collection.query(
-        query_embeddings=query_embedding,
+        query_embeddings=query_embeddings,
         n_results=n_results
     )
     
