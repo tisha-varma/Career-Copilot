@@ -114,6 +114,24 @@ def get_user_files(uid: str) -> list[dict]:
     return [doc.to_dict() for doc in docs]
 
 
+def get_all_users() -> list[dict]:
+    """
+    Return all user profiles in the system, sorted by newest first.
+    """
+    db = _get_db()
+    docs = db.collection("users").order_by("created_at", direction=firestore.Query.DESCENDING).stream()
+    return [doc.to_dict() for doc in docs]
+
+
+def get_all_files() -> list[dict]:
+    """
+    Return all uploaded file records across all users, newest first.
+    """
+    db = _get_db()
+    docs = db.collection("files").order_by("uploaded_at", direction=firestore.Query.DESCENDING).stream()
+    return [doc.to_dict() for doc in docs]
+
+
 # ── Audit Logs Collection ────────────────────────────────────────────────────
 
 def save_audit_log(uid: str, action: str, details: str) -> None:
@@ -145,6 +163,19 @@ def get_audit_logs(uid: str) -> list[dict]:
     docs = (
         db.collection("audit_logs")
         .where("uid", "==", uid)
+        .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        .stream()
+    )
+    return [doc.to_dict() for doc in docs]
+
+
+def get_all_audit_logs() -> list[dict]:
+    """
+    Return all audit log entries across the entire system, sorted newest-first.
+    """
+    db = _get_db()
+    docs = (
+        db.collection("audit_logs")
         .order_by("timestamp", direction=firestore.Query.DESCENDING)
         .stream()
     )

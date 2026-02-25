@@ -46,7 +46,10 @@ from firestore_db import (
     save_file_metadata, 
     get_user,
     get_user_files,
-    get_audit_logs
+    get_audit_logs,
+    get_all_users,
+    get_all_files,
+    get_all_audit_logs
 )
 from cloudinary_storage import upload_resume as cloudinary_upload
 from audit import log_action
@@ -534,16 +537,60 @@ async def export_feedback():
     )
 
 
+# ── Admin Dependency ──────────────────────────────────────────
+
+async def get_current_admin(user: dict = Depends(get_current_user)):
+    """
+    FastAPI dependency that ensures the logged-in user is an admin.
+    List of admin emails is defined in ADMIN_EMAILS environment variable.
+    """
+    admin_emails = os.environ.get("ADMIN_EMAILS", "").split(",")
+    admin_emails = [email.strip() for email in admin_emails if email.strip()]
+    
+    if user["email"] not in admin_emails:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access Denied: You do not have administrator privileges."
+        )
+    return user
+
+
+# ── GET /admin/dashboard ─────────────────────────────────────
+@app.get("/admin/dashboard")
+async def admin_dashboard(
+    request: Request,
+    admin: dict = Depends(get_current_admin)
+):
+    """Render the centralized administration dashboard."""
+    users = get_all_users()
+    files = get_all_files()
+    logs = get_all_audit_logs()
+    
+    return templates.TemplateResponse(
+        "admin_dashboard.html",
+        {
+            "request": request,
+            "admin": admin,
+            "users": users,
+            "files": files,
+            "logs": logs
+        }
+    )
+
+
+# ── GET /admin/resumes ────────────────────────────────────
 @app.get("/admin/resumes")
-async def list_resumes():
-    """List all resumes uploaded to the system (Admin only)."""
-    from resume_storage import get_recent_uploads
-    uploads = get_recent_uploads(100)
+async def admin_resumes(
+    request: Request,
+    admin: dict = Depends(get_current_admin)
+):
+    """Legacy admin view updated to show live Firestore data."""
+    uploads = get_all_files()
     
     html = f"""
     <html>
         <head>
-            <title>Resume Admin</title>
+            <title>Admin - All Resumes</title>
             <style>
                 body {{ font-family: sans-serif; padding: 20px; }}
                 table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
@@ -554,20 +601,19 @@ async def list_resumes():
         </head>
         <body>
             <div class="container">
-                <h1>📁 Uploaded Resumes</h1>
-                <p>All resumes are stored in <code>app/data/resumes/</code></p>
+                <h1>📁 All Uploaded Resumes (Live)</h1>
+                <p>Pulling from Firestore collection <code>files</code></p>
                 <table>
                     <tr>
                         <th>Date</th>
-                        <th>Name</th>
-                        <th>Role</th>
-                        <th>Email</th>
-                        <th>File</th>
+                        <th>User UID</th>
+                        <th>File Name</th>
+                        <th>Action</th>
                     </tr>
-                    {"".join([f"<tr><td>{u['uploaded_at'][:10]}</td><td>{u['detected_name']}</td><td>{u['target_role']}</td><td>{u['detected_email']}</td><td>{u['filename']}</td></tr>" for u in uploads])}
+                    {"".join([f"<tr><td>{f['uploaded_at'][:16]}</td><td>{f['uid'][:8]}...</td><td>{f['file_name']}</td><td><a href='{f['file_url']}' target='_blank'>View PDF</a></td></tr>" for f in uploads])}
                 </table>
                 <br>
-                <a href="/export-feedback-csv">📊 Download Feedback Excel (CSV)</a>
+                <a href="/admin/dashboard">← Back to Dashboard</a>
             </div>
         </body>
     </html>
