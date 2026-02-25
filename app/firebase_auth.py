@@ -19,28 +19,36 @@ from fastapi import Request, HTTPException, status
 def _init_firebase():
     """
     Build Firebase credentials from environment variables.
-
-    IMPORTANT: Railway stores the private key as a single-line string with
-    literal '\\n' characters. We must replace them with real newlines.
     """
     if firebase_admin._apps:
-        return  # Already initialized — skip
+        return
 
-    private_key = os.environ.get("FIREBASE_PRIVATE_KEY", "")
-    # Fix Railway / .env private key line-break encoding
-    private_key = private_key.replace("\\n", "\n")
+    # Check if we have the minimum required vars to even try
+    project_id = os.environ.get("FIREBASE_PROJECT_ID")
+    client_email = os.environ.get("FIREBASE_CLIENT_EMAIL")
+    private_key = os.environ.get("FIREBASE_PRIVATE_KEY")
 
-    cert = credentials.Certificate({
-        "type": "service_account",
-        "project_id":   os.environ.get("FIREBASE_PROJECT_ID"),
-        "private_key":  private_key,
-        "client_email": os.environ.get("FIREBASE_CLIENT_EMAIL"),
-        # Required fields with placeholder values (not used at runtime)
-        "token_uri": "https://oauth2.googleapis.com/token",
-    })
+    if not all([project_id, client_email, private_key]):
+        print("[Firebase] Warning: Missing FIREBASE_PROJECT_ID, CLIENT_EMAIL, or PRIVATE_KEY. Auth features will be disabled.")
+        return
 
-    firebase_admin.initialize_app(cert)
-    print("[Firebase] Admin SDK initialized ✓")
+    try:
+        # Fix Railway / .env private key line-break encoding
+        fixed_private_key = private_key.replace("\\n", "\n")
+
+        cert_dict = {
+            "type": "service_account",
+            "project_id": project_id,
+            "private_key": fixed_private_key,
+            "client_email": client_email,
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+
+        cert = credentials.Certificate(cert_dict)
+        firebase_admin.initialize_app(cert)
+        print("[Firebase] Admin SDK initialized ✓")
+    except Exception as e:
+        print(f"[Firebase] Error: Failed to initialize Admin SDK: {e}")
 
 
 # Run initialization at import time

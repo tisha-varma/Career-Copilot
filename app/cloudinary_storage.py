@@ -31,13 +31,24 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 # ── Initialize Cloudinary (once at import) ───────────────────────────────────
 
 def _init_cloudinary():
-    cloudinary.config(
-        cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
-        api_key=os.environ.get("CLOUDINARY_API_KEY"),
-        api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
-        secure=True,  # Always use HTTPS URLs
-    )
-    print("[Cloudinary] Configured ✓")
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
+    api_key = os.environ.get("CLOUDINARY_API_KEY")
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET")
+
+    if not all([cloud_name, api_key, api_secret]):
+        print("[Cloudinary] Warning: Missing Cloudinary environment variables. Uploads will be disabled.")
+        return
+
+    try:
+        cloudinary.config(
+            cloud_name=cloud_name,
+            api_key=api_key,
+            api_secret=api_secret,
+            secure=True,
+        )
+        print("[Cloudinary] Configured ✓")
+    except Exception as e:
+        print(f"[Cloudinary] Error: Failed to configure Cloudinary: {e}")
 
 
 _init_cloudinary()
