@@ -552,6 +552,128 @@ async def list_resumes():
     return HTMLResponse(content=html)
 
 
+# ============================================================
+# Auth & Storage Routes (Firebase + Firestore + Cloudinary)
+# ============================================================
+# These routes are independent of the existing resume analysis
+# flow and do NOT modify any existing endpoints above.
+
+from fastapi import Depends
+from firebase_auth import get_current_user
+from firestore_db import (
+    create_or_update_user, get_user,
+    save_file_metadata, get_user_files,
+    get_audit_logs,
+)
+from cloudinary_storage import upload_resume as cloudinary_upload
+from audit import log_action
+
+# ── POST /verify-user ────────────────────────────────────────
+@app.post("/verify-user")
+async def verify_user(user: dict = Depends(get_current_user)):
+    """
+    Verify Firebase ID token and create/update the user in Firestore.
+
+    Frontend sends:
+        Authorization: Bearer <FIREBASE_ID_TOKEN>
+
+    Returns:
+        uid, name, email
+    """
+    # Upsert user document in Firestore
+    create_or_update_user(
+        uid=user["uid"],
+        name=user["name"],
+        email=user["email"],
+        picture=user["picture"],
+    )
+
+    # Log the login action
+    log_action(uid=user["uid"], action="LOGIN", details="Google login via Firebase")
+
+    return {
+        "uid":   user["uid"],
+        "name":  user["name"],
+        "email": user["email"],
+    }
+
+
+# ── GET /profile ─────────────────────────────────────────────
+@app.get("/profile")
+async def get_profile(user: dict = Depends(get_current_user)):
+    """
+    Return the logged-in user's profile from Firestore.
+
+    Returns:
+        uid, name, email, profile_picture
+    """
+    profile = get_user(user["uid"])
+    if not profile:
+        return JSONResponse({"error": "User not found"}, status_code=404)
+    return profile
+
+
+# ── POST /upload-resume ───────────────────────────────────────
+@app.post("/upload-resume")
+async def upload_resume_route(
+    resume: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+):
+    """
+    Upload a resume (PDF or DOCX, max 5 MB) to Cloudinary.
+    Save metadata in Firestore. Railway stores nothing.
+
+    Returns:
+        file_url: Cloudinary secure URL
+    """
+    # Upload to Cloudinary (validates type + size internally)
+    file_url = await cloudinary_upload(resume)
+
+    # Save metadata to Firestore
+    metadata = save_file_metadata(
+        uid=user["uid"],
+        file_name=resume.filename or "resume",
+        file_url=file_url,
+    )
+
+    # Audit log
+    log_action(
+        uid=user["uid"],
+        action="UPLOAD_RESUME",
+        details=resume.filename or "resume",
+    )
+
+    return {"file_url": file_url, "file_name": metadata["file_name"]}
+
+
+# ── GET /files ────────────────────────────────────────────────
+@app.get("/files")
+async def list_files(user: dict = Depends(get_current_user)):
+    """
+    Return all uploaded resume records for the logged-in user.
+
+    Returns:
+        List of { id, file_name, file_url, uploaded_at }
+    """
+    files = get_user_files(user["uid"])
+    return {"files": files}
+
+
+# ── GET /audit ────────────────────────────────────────────────
+@app.get("/audit")
+async def list_audit_logs(user: dict = Depends(get_current_user)):
+    """
+    Return audit log history for the logged-in user.
+
+    Returns:
+        List of { action, details, timestamp }
+    """
+    logs = get_audit_logs(user["uid"])
+    return {"audit_logs": logs}
+
+
+# ============================================================
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
