@@ -339,30 +339,18 @@ def _format_cover_letter(text: str) -> str:
 def generate_cover_letter_llama(resume_text: str, job_description: str, 
                                  company_name: str, position: str,
                                  candidate_name: str) -> Dict[str, Any]:
-    """Generate deeply personalized cover letter using LLaMA + embeddings."""
-    
-    # Create session ID for embeddings
-    session_id = hashlib.md5(resume_text[:100].encode()).hexdigest()
-    
-    # Create embeddings for semantic search
-    collection = create_resume_embeddings(resume_text, session_id)
-    
-    # Semantic search tailored to the job description
-    relevant_projects = semantic_search(collection, f"projects {job_description[:300]}", 5)
-    relevant_skills = semantic_search(collection, f"skills technologies {job_description[:300]}", 4)
-    relevant_experience = semantic_search(collection, f"experience work achievements {job_description[:300]}", 4)
-    relevant_impact = semantic_search(collection, f"results impact metrics improved reduced increased", 3)
-    
+    """Generate deeply personalized cover letter using LLaMA (direct resume analysis)."""
+
     # Extract structured info using LLaMA
     print("Cover Letter: Extracting resume details (LLaMA)...")
     resume_info = extract_resume_info_llama(resume_text)
-    
-    # Build rich context
+
+    # Build rich context directly from structured info
     projects_detail = json.dumps(resume_info.get("projects", []), indent=2)
     experience_detail = json.dumps(resume_info.get("experience", []), indent=2)
     skills_detail = json.dumps(resume_info.get("skills", {}), indent=2)
     achievements = resume_info.get("achievements", [])
-    
+
     system_prompt = """You are an elite cover letter writer who creates cover letters that get interviews.
 Your cover letters are HIGHLY SPECIFIC — they reference exact project names, technologies, metrics, 
 and achievements from the candidate's resume and precisely map them to job requirements.
@@ -375,29 +363,22 @@ ALWAYS respond with valid JSON only."""
 
     prompt = f"""Create a deeply personalized cover letter AND a match analysis for {candidate_name} applying to {company_name} for {position}.
 
-=== CANDIDATE'S PROJECTS ===
+=== FULL RESUME ===
+{resume_text[:4000]}
+
+=== STRUCTURED RESUME DATA ===
+
+CANDIDATE'S PROJECTS:
 {projects_detail}
 
-=== CANDIDATE'S EXPERIENCE ===
+CANDIDATE'S EXPERIENCE:
 {experience_detail}
 
-=== CANDIDATE'S SKILLS ===
+CANDIDATE'S SKILLS:
 {skills_detail}
 
-=== CANDIDATE'S ACHIEVEMENTS ===
+CANDIDATE'S ACHIEVEMENTS:
 {json.dumps(achievements, indent=2)}
-
-=== RELEVANT PROJECT SECTIONS FROM RESUME ===
-{chr(10).join(relevant_projects)}
-
-=== RELEVANT SKILLS SECTIONS ===
-{chr(10).join(relevant_skills)}
-
-=== RELEVANT EXPERIENCE SECTIONS ===
-{chr(10).join(relevant_experience)}
-
-=== IMPACT & METRICS FROM RESUME ===
-{chr(10).join(relevant_impact)}
 
 === JOB DESCRIPTION ===
 {job_description[:2500]}
@@ -485,29 +466,17 @@ Return a JSON object with this EXACT structure:
 def generate_interview_questions_llama(resume_text: str, target_role: str,
                                         strengths: List[str] = None,
                                         skill_gaps: Dict = None) -> Dict[str, Any]:
-    """Generate deeply personalized interview questions using LLaMA + embeddings."""
-    
-    # Create session ID for embeddings
-    session_id = hashlib.md5(resume_text[:100].encode()).hexdigest()
-    
-    # Create embeddings
-    collection = create_resume_embeddings(resume_text, session_id)
-    
+    """Generate deeply personalized interview questions using LLaMA (direct resume analysis)."""
+
     # Extract structured resume info using LLaMA
     print("Interview Prep: Extracting resume details (LLaMA)...")
     resume_info = extract_resume_info_llama(resume_text)
-    
-    # Semantic search for different aspects of the resume
-    relevant_projects = semantic_search(collection, "projects technical implementation architecture design", 5)
-    relevant_experience = semantic_search(collection, "work experience role achievements impact metrics", 4)
-    relevant_tech = semantic_search(collection, "technologies frameworks tools programming languages", 4)
-    relevant_challenges = semantic_search(collection, "challenges problems solved improved optimized", 3)
-    
-    # Build rich project context for the prompt
+
+    # Build rich project context for the prompt directly from structured data
     projects_detail = json.dumps(resume_info.get("projects", []), indent=2)
     experience_detail = json.dumps(resume_info.get("experience", []), indent=2)
     skills_detail = json.dumps(resume_info.get("skills", {}), indent=2)
-    
+
     system_prompt = """You are a senior technical interviewer at a top tech company. Your job is to generate 
 HIGHLY SPECIFIC and DEEPLY PERSONALIZED interview questions based on the candidate's actual resume.
 
@@ -523,26 +492,19 @@ Always respond with valid JSON only."""
 
     prompt = f"""Generate 10 deeply personalized interview questions for this candidate applying for a {target_role} role.
 
-=== CANDIDATE'S PROJECTS (with details) ===
+=== FULL RESUME TEXT ===
+{resume_text[:5000]}
+
+=== STRUCTURED RESUME DATA ===
+
+CANDIDATE'S PROJECTS (with details):
 {projects_detail}
 
-=== CANDIDATE'S WORK EXPERIENCE ===
+CANDIDATE'S WORK EXPERIENCE:
 {experience_detail}
 
-=== CANDIDATE'S SKILLS ===
+CANDIDATE'S SKILLS:
 {skills_detail}
-
-=== RELEVANT PROJECT DETAILS FROM RESUME ===
-{chr(10).join(relevant_projects)}
-
-=== WORK EXPERIENCE HIGHLIGHTS ===
-{chr(10).join(relevant_experience)}
-
-=== TECHNOLOGIES MENTIONED ===
-{chr(10).join(relevant_tech)}
-
-=== CHALLENGES & ACHIEVEMENTS ===
-{chr(10).join(relevant_challenges)}
 
 {f"IDENTIFIED STRENGTHS: {strengths}" if strengths else ""}
 {f"SKILL GAPS TO PROBE: {json.dumps(skill_gaps)}" if skill_gaps else ""}
