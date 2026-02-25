@@ -6,6 +6,10 @@ Resume Analysis & Career Planning App
 import os
 import json
 import csv
+from dotenv import load_dotenv
+
+# Load environment variables from .env file (if it exists)
+load_dotenv()
 from pathlib import Path
 from datetime import datetime
 from fastapi import FastAPI, Request, UploadFile, File, Form
