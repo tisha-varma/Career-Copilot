@@ -33,6 +33,17 @@ from session_manager import (
     update_session
 )
 from rate_limiter import rate_limit
+from fastapi import Depends
+from firebase_auth import get_current_user
+from firestore_db import (
+    create_or_update_user, 
+    save_file_metadata, 
+    get_user,
+    get_user_files,
+    get_audit_logs
+)
+from cloudinary_storage import upload_resume as cloudinary_upload
+from audit import log_action
 
 # Upload limits
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -78,12 +89,13 @@ async def index(request: Request):
     )
 
 
-@app.post("/analyze", response_class=HTMLResponse)
-@rate_limit(requests=2, window_seconds=60)  # Max 2 resumes per minute
+@app.post("/analyze")
+@rate_limit(requests=2, window_seconds=60)
 async def analyze(
     request: Request,
     resume: UploadFile = File(...),
-    role: str = Form(...)
+    role: str = Form(...),
+    user: dict = Depends(get_current_user)
 ):
     """Analyze the uploaded resume against the selected role."""
     # Validate role
@@ -102,22 +114,16 @@ async def analyze(
         
         # Validate file size
         if len(file_bytes) > MAX_UPLOAD_SIZE:
-            return templates.TemplateResponse(
-                "index.html",
-                {
-                    "request": request,
-                    "error": f"File too large. Maximum size is {MAX_UPLOAD_SIZE // (1024*1024)}MB. Your file is {len(file_bytes) / (1024*1024):.1f}MB."
-                }
+            return JSONResponse(
+                status_code=400,
+                content={"detail": f"File too large. Maximum size is {MAX_UPLOAD_SIZE // (1024*1024)}MB."}
             )
         
         # Validate file type
         if not (resume.filename or "").lower().endswith(".pdf"):
-            return templates.TemplateResponse(
-                "index.html",
-                {
-                    "request": request,
-                    "error": "Only PDF files are supported. Please upload a .pdf resume."
-                }
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Only PDF files are supported. Please upload a .pdf resume."}
             )
         
         await resume.seek(0)  # Reset for parser
@@ -125,28 +131,31 @@ async def analyze(
         resume_text, page_count = await parse_resume(resume)
         
         if not resume_text.strip():
-            return templates.TemplateResponse(
-                "index.html",
-                {
-                    "request": request,
-                    "error": "Could not extract text from the PDF. Please ensure the PDF contains readable text."
-                }
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Could not extract text from the PDF. Please ensure the PDF contains readable text."}
             )
         
         # Generate resume preview for verification
         resume_preview = get_resume_preview(resume_text, page_count)
         
-        # Save resume to storage
+        # Save resume to external storage
         try:
-            save_resume(
-                file_bytes=file_bytes,
-                original_filename=resume.filename or "resume.pdf",
-                target_role=role,
-                detected_name=resume_preview.get("detected_name"),
-                detected_email=resume_preview.get("email"),
+            # 1. Upload to Cloudinary (passing the UploadFile object)
+            file_url = await cloudinary_upload(resume)
+            
+            # 2. Save metadata to Firestore
+            save_file_metadata(
+                uid=user['uid'],
+                file_name=resume.filename or "resume.pdf",
+                file_url=file_url
             )
+            
+            # 3. Log the action
+            log_action(user['uid'], "UPLOAD_RESUME", f"Analyzed for {role}")
+            
         except Exception as storage_err:
-            print(f"[Warning] Could not save resume: {storage_err}")
+            print(f"[Warning] Could not save resume to external storage: {storage_err}")
         
         # Create session for this user
         session_id = create_session()
@@ -169,32 +178,25 @@ async def analyze(
 
         # Store in user-specific session
         update_session(session_id, {
+            "uid": user['uid'],
             "resume_text": resume_text,
             "role": role,
             "analysis": analysis,
             "resume_preview": resume_preview,
         })
         
-        response = templates.TemplateResponse(
-            "result.html",
-            {
-                "request": request,
-                "analysis": analysis,
-                "resume_preview": resume_preview
-            }
-        )
+        # Success response for fetch
+        response = JSONResponse(content={"success": True, "redirect": "/results"})
         
         # Set session cookie so subsequent requests know this user
         set_session_cookie(response, session_id)
         return response
     
     except Exception as e:
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "error": f"An error occurred during analysis: {str(e)}"
-            }
+        print(f"Error during analysis: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": str(e)}
         )
 
 
@@ -308,16 +310,27 @@ async def interview_page(request: Request):
 
 
 @app.post("/api/resume-questions")
-@rate_limit(requests=3, window_seconds=60)  # Max 3 generations per minute
-async def generate_resume_questions(request: Request):
+@rate_limit(requests=3, window_seconds=60)
+async def generate_resume_questions(
+    request: Request,
+    user: dict = Depends(get_current_user)
+):
     """AJAX endpoint: generate AI-powered resume-based questions on demand."""
     analysis = get_session_data(request, "analysis")
     resume_text = get_session_data(request, "resume_text", "")
     
+    # Optional: Verify this session belongs to the authenticated user
+    session_uid = get_session_data(request, "uid")
+    if session_uid and session_uid != user['uid']:
+        return JSONResponse({"error": "Session mismatch"}, status_code=403)
+
     if not analysis or not resume_text:
         return JSONResponse({"error": "No session data"}, status_code=400)
     
     try:
+        # Log the generation request
+        log_action(user['uid'], "GENERATE_AI_QUESTIONS", {"role": analysis.get("target_role")})
+        
         llm_analysis = get_interview_questions_with_analysis(
             resume_text,
             target_role=analysis.get("target_role", ""),
@@ -556,65 +569,26 @@ async def list_resumes():
     return HTMLResponse(content=html)
 
 
-# ============================================================
-# Auth & Storage Routes (Firebase + Firestore + Cloudinary)
-# ============================================================
-# These routes are independent of the existing resume analysis
-# flow and do NOT modify any existing endpoints above.
-
-from fastapi import Depends
-from firebase_auth import get_current_user
-from firestore_db import (
-    create_or_update_user, get_user,
-    save_file_metadata, get_user_files,
-    get_audit_logs,
-)
-from cloudinary_storage import upload_resume as cloudinary_upload
-from audit import log_action
-
 # ── POST /verify-user ────────────────────────────────────────
 @app.post("/verify-user")
 async def verify_user(user: dict = Depends(get_current_user)):
-    """
-    Verify Firebase ID token and create/update the user in Firestore.
-
-    Frontend sends:
-        Authorization: Bearer <FIREBASE_ID_TOKEN>
-
-    Returns:
-        uid, name, email
-    """
-    # Upsert user document in Firestore
+    """Verify Firebase ID token and create/update user in Firestore."""
     create_or_update_user(
         uid=user["uid"],
         name=user["name"],
         email=user["email"],
         picture=user["picture"],
     )
-
-    # Log the login action
-    log_action(uid=user["uid"], action="LOGIN", details="Google login via Firebase")
-
-    return {
-        "uid":   user["uid"],
-        "name":  user["name"],
-        "email": user["email"],
-    }
+    log_action(uid=user["uid"], action="LOGIN", details="Google login")
+    return {"status": "success", "uid": user["uid"]}
 
 
 # ── GET /profile ─────────────────────────────────────────────
 @app.get("/profile")
 async def get_profile(user: dict = Depends(get_current_user)):
-    """
-    Return the logged-in user's profile from Firestore.
-
-    Returns:
-        uid, name, email, profile_picture
-    """
+    """Return the logged-in user's profile from Firestore."""
     profile = get_user(user["uid"])
-    if not profile:
-        return JSONResponse({"error": "User not found"}, status_code=404)
-    return profile
+    return profile or user
 
 
 # ── POST /upload-resume ───────────────────────────────────────
@@ -623,42 +597,17 @@ async def upload_resume_route(
     resume: UploadFile = File(...),
     user: dict = Depends(get_current_user),
 ):
-    """
-    Upload a resume (PDF or DOCX, max 5 MB) to Cloudinary.
-    Save metadata in Firestore. Railway stores nothing.
-
-    Returns:
-        file_url: Cloudinary secure URL
-    """
-    # Upload to Cloudinary (validates type + size internally)
+    """Upload resume to Cloudinary and save metadata."""
     file_url = await cloudinary_upload(resume)
-
-    # Save metadata to Firestore
-    metadata = save_file_metadata(
-        uid=user["uid"],
-        file_name=resume.filename or "resume",
-        file_url=file_url,
-    )
-
-    # Audit log
-    log_action(
-        uid=user["uid"],
-        action="UPLOAD_RESUME",
-        details=resume.filename or "resume",
-    )
-
-    return {"file_url": file_url, "file_name": metadata["file_name"]}
+    save_file_metadata(uid=user["uid"], file_name=resume.filename or "resume", file_url=file_url)
+    log_action(uid=user["uid"], action="UPLOAD_RESUME", details=resume.filename or "resume")
+    return {"file_url": file_url}
 
 
 # ── GET /files ────────────────────────────────────────────────
 @app.get("/files")
 async def list_files(user: dict = Depends(get_current_user)):
-    """
-    Return all uploaded resume records for the logged-in user.
-
-    Returns:
-        List of { id, file_name, file_url, uploaded_at }
-    """
+    """Return all uploaded resume records for the user."""
     files = get_user_files(user["uid"])
     return {"files": files}
 
@@ -666,12 +615,7 @@ async def list_files(user: dict = Depends(get_current_user)):
 # ── GET /audit ────────────────────────────────────────────────
 @app.get("/audit")
 async def list_audit_logs(user: dict = Depends(get_current_user)):
-    """
-    Return audit log history for the logged-in user.
-
-    Returns:
-        List of { action, details, timestamp }
-    """
+    """Return audit log history for the user."""
     logs = get_audit_logs(user["uid"])
     return {"audit_logs": logs}
 

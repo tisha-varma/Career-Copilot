@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/static/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script type="module" src="/static/js/auth.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -36,6 +37,26 @@
 
     <div class="relative min-h-screen py-12 px-4">
         <div class="max-w-4xl mx-auto">
+            <!-- Auth Controls -->
+            <div class="absolute top-8 right-8 z-20">
+                <button id="loginBtn" onclick="auth.loginWithGoogle()"
+                    class="hidden flex items-center gap-2 px-5 py-2.5 bg-white text-slate-700 font-semibold rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5"
+                        alt="Google">
+                    Sign in with Google
+                </button>
+                <div id="userNav"
+                    class="hidden flex items-center gap-4 bg-white/80 backdrop-blur-md p-1.5 pr-4 rounded-2xl border border-white/50 shadow-sm">
+                    <img id="userImg" src="" class="w-10 h-10 rounded-xl bg-slate-200 object-cover border border-white"
+                        alt="User">
+                    <div class="flex flex-col">
+                        <span id="userName" class="text-sm font-bold text-slate-800 leading-none mb-1"></span>
+                        <button onclick="auth.logout()"
+                            class="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-wider text-left transition-colors">Logout</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Header -->
             <div class="text-center mb-10">
                 <a href="/results"
@@ -383,7 +404,11 @@
                     startLoadingAnimation();
 
                     try {
-                        const res = await fetch('/api/resume-questions', { method: 'POST' });
+                        const authHeader = await auth.getAuthHeader();
+                        const res = await fetch('/api/resume-questions', {
+                            method: 'POST',
+                            headers: { ...authHeader }
+                        });
                         const data = await res.json();
 
                         if (!res.ok) throw new Error(data.error || 'Failed to generate questions');
