@@ -16,10 +16,14 @@ from fastapi import Request, HTTPException, status
 
 # ── Initialize Firebase Admin SDK (once) ────────────────────────────────────
 
+# Track initialization status for better debugging
+_init_error = None
+
 def _init_firebase():
     """
     Build Firebase credentials from environment variables.
     """
+    global _init_error
     if firebase_admin._apps:
         return
 
@@ -29,7 +33,13 @@ def _init_firebase():
     private_key = os.environ.get("FIREBASE_PRIVATE_KEY")
 
     if not all([project_id, client_email, private_key]):
-        print("[Firebase] Warning: Missing FIREBASE_PROJECT_ID, CLIENT_EMAIL, or PRIVATE_KEY. Auth features will be disabled.")
+        missing = [k for k, v in {
+            "FIREBASE_PROJECT_ID": project_id,
+            "FIREBASE_CLIENT_EMAIL": client_email,
+            "FIREBASE_PRIVATE_KEY": private_key
+        }.items() if not v]
+        _init_error = f"Missing environment variables: {', '.join(missing)}"
+        print(f"[Firebase] Warning: {_init_error}. Auth features will be disabled.")
         return
 
     try:
@@ -48,7 +58,8 @@ def _init_firebase():
         firebase_admin.initialize_app(cert)
         print("[Firebase] Admin SDK initialized ✓")
     except Exception as e:
-        print(f"[Firebase] Error: Failed to initialize Admin SDK: {e}")
+        _init_error = f"Failed to initialize Admin SDK: {str(e)}"
+        print(f"[Firebase] Error: {_init_error}")
 
 
 # Run initialization at import time
@@ -70,6 +81,12 @@ def verify_firebase_token(token: str) -> dict:
     Raises:
         HTTPException 401 if token is invalid or expired
     """
+    if _init_error:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Firebase not initialized: {_init_error}",
+        )
+
     try:
         decoded = auth.verify_id_token(token)
         return {
@@ -79,6 +96,14 @@ def verify_firebase_token(token: str) -> dict:
             "picture": decoded.get("picture", ""),
         }
     except Exception as e:
+        # If we got here but initialize_app succeeded, it's likely a token issue
+        # However, checking if apps still exist just in case
+        if not firebase_admin._apps:
+             raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Firebase app was not initialized correctly. Check credentials.",
+            )
+            
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid or expired Firebase token: {str(e)}",

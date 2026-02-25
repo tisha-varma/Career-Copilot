@@ -6,11 +6,17 @@ Resume Analysis & Career Planning App
 import os
 import json
 import csv
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file (if it exists)
-load_dotenv()
-from pathlib import Path
+# Load environment variables from .env file in the project root
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+    print(f"[Main] Loaded .env via {env_path} ✓")
+else:
+    print(f"[Main] Warning: .env not found at {env_path}. Relying on system environment variables.")
+
 from datetime import datetime
 from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
