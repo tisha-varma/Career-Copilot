@@ -12,22 +12,33 @@ import os
 import firebase_admin
 from firebase_admin import credentials, auth
 from fastapi import Request, HTTPException, status
-
+from pathlib import Path
+from dotenv import load_dotenv
 
 # ── Initialize Firebase Admin SDK (once) ────────────────────────────────────
+
+# Ensure .env is loaded even if this module is imported before main.py finishes
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
 
 # Track initialization status for better debugging
 _init_error = None
 
 def _init_firebase():
     """
-    Build Firebase credentials from environment variables.
+    Build Firebase credentials from environment variables safely.
     """
     global _init_error
-    if firebase_admin._apps:
-        return
+    
+    # Correct way to check if 'default' app exists
+    try:
+        firebase_admin.get_app()
+        return # Already exists
+    except ValueError:
+        pass # Doesn't exist, proceed
 
-    # Check if we have the minimum required vars to even try
+    # Check for variables
     project_id = os.environ.get("FIREBASE_PROJECT_ID")
     client_email = os.environ.get("FIREBASE_CLIENT_EMAIL")
     private_key = os.environ.get("FIREBASE_PRIVATE_KEY")
@@ -39,12 +50,15 @@ def _init_firebase():
             "FIREBASE_PRIVATE_KEY": private_key
         }.items() if not v]
         _init_error = f"Missing environment variables: {', '.join(missing)}"
-        print(f"[Firebase] Warning: {_init_error}. Auth features will be disabled.")
+        print(f"[Firebase] Warning: {_init_error}")
         return
 
     try:
-        # Fix Railway / .env private key line-break encoding
+        # Fix line-break encoding for private key
         fixed_private_key = private_key.replace("\\n", "\n")
+        # Strip potential wrapping quotes
+        if fixed_private_key.startswith('"') and fixed_private_key.endswith('"'):
+            fixed_private_key = fixed_private_key[1:-1]
 
         cert_dict = {
             "type": "service_account",
@@ -62,7 +76,7 @@ def _init_firebase():
         print(f"[Firebase] Error: {_init_error}")
 
 
-# Run initialization at import time
+# Run initialization
 _init_firebase()
 
 
