@@ -90,7 +90,8 @@ async def upload_resume(file) -> str:
             detail=f"Invalid file type '{content_type}'. Allowed: PDF, DOCX.",
         )
 
-    # 2. Read file as bytes
+    # 2. Reset pointer and read file as bytes
+    await file.seek(0)
     file_bytes = await file.read()
 
     # 3. Validate file size (must happen AFTER reading)
