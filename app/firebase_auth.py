@@ -15,12 +15,15 @@ from fastapi import Request, HTTPException, status
 from pathlib import Path
 from dotenv import load_dotenv
 
-# ── Initialize Firebase Admin SDK (once) ────────────────────────────────────
+# ── Initialize Environment ──────────────────────────────────────────────────
 
-# Ensure .env is loaded even if this module is imported before main.py finishes
+# 1. Try absolute .env path (for local development)
 env_path = Path(__file__).parent.parent / ".env"
 if env_path.exists():
     load_dotenv(dotenv_path=env_path)
+else:
+    # 2. Try generic load_dotenv (standard fallback for Docker/Railway)
+    load_dotenv()
 
 # Track initialization status for better debugging
 _init_error = None
@@ -38,17 +41,14 @@ def _init_firebase():
     except ValueError:
         pass # Doesn't exist, proceed
 
-    # Check for variables
-    project_id = os.environ.get("FIREBASE_PROJECT_ID")
-    client_email = os.environ.get("FIREBASE_CLIENT_EMAIL")
-    private_key = os.environ.get("FIREBASE_PRIVATE_KEY")
+    # Check for variables and strip whitespace/quotes
+    project_id = (os.environ.get("FIREBASE_PROJECT_ID") or "").strip()
+    client_email = (os.environ.get("FIREBASE_CLIENT_EMAIL") or "").strip()
+    private_key = (os.environ.get("FIREBASE_PRIVATE_KEY") or "").strip()
 
     if not all([project_id, client_email, private_key]):
-        missing = [k for k, v in {
-            "FIREBASE_PROJECT_ID": project_id,
-            "FIREBASE_CLIENT_EMAIL": client_email,
-            "FIREBASE_PRIVATE_KEY": private_key
-        }.items() if not v]
+        missing = [k for k in ["FIREBASE_PROJECT_ID", "FIREBASE_CLIENT_EMAIL", "FIREBASE_PRIVATE_KEY"] 
+                   if not os.environ.get(k)]
         _init_error = f"Missing environment variables: {', '.join(missing)}"
         print(f"[Firebase] Warning: {_init_error}")
         return

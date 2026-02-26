@@ -9,13 +9,15 @@ import csv
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file in the project root
+# 1. Try absolute .env path (project root)
 env_path = Path(__file__).parent.parent / ".env"
 if env_path.exists():
     load_dotenv(dotenv_path=env_path)
     print(f"[Main] Loaded .env via {env_path} ✓")
 else:
-    print(f"[Main] Warning: .env not found at {env_path}. Relying on system environment variables.")
+    # 2. Try generic load_dotenv (standard fallback)
+    load_dotenv()
+    print("[Main] Relying on system environment variables / generic .env lookup.")
 
 from datetime import datetime
 from fastapi import FastAPI, Request, UploadFile, File, Form

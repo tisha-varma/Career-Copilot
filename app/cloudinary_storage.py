@@ -17,6 +17,17 @@ import io
 import cloudinary
 import cloudinary.uploader
 from fastapi import HTTPException, status
+from pathlib import Path
+from dotenv import load_dotenv
+
+
+# ── Initialize Environment ──────────────────────────────────────────────────
+# Ensure .env is loaded even if this module is imported before main.py finishes
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    load_dotenv()
 
 
 # Allowed MIME types → extension map
@@ -31,9 +42,10 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 # ── Initialize Cloudinary (once at import) ───────────────────────────────────
 
 def _init_cloudinary():
-    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
-    api_key = os.environ.get("CLOUDINARY_API_KEY")
-    api_secret = os.environ.get("CLOUDINARY_API_SECRET")
+    # Strip whitespace from keys to prevent Railway paste errors
+    cloud_name = (os.environ.get("CLOUDINARY_CLOUD_NAME") or "").strip()
+    api_key = (os.environ.get("CLOUDINARY_API_KEY") or "").strip()
+    api_secret = (os.environ.get("CLOUDINARY_API_SECRET") or "").strip()
 
     if not all([cloud_name, api_key, api_secret]):
         print("[Cloudinary] Warning: Missing Cloudinary environment variables. Uploads will be disabled.")
