@@ -48,7 +48,7 @@ def _init_firebase():
 
     if not all([project_id, client_email, private_key]):
         missing = [k for k in ["FIREBASE_PROJECT_ID", "FIREBASE_CLIENT_EMAIL", "FIREBASE_PRIVATE_KEY"] 
-                   if not os.environ.get(k)]
+                   if not os.environ.get(k) or not os.environ.get(k).strip()]
         _init_error = f"Missing environment variables: {', '.join(missing)}"
         print(f"[Firebase] Warning: {_init_error}")
         return
