@@ -129,28 +129,32 @@ def verify_firebase_token(token: str) -> dict:
 async def get_current_user(request: Request) -> dict:
     """
     FastAPI dependency — extracts and verifies the Firebase ID token
-    from the Authorization header.
+    from the Authorization header OR the 'firebase_token' cookie.
 
-    Frontend must send:
-        Authorization: Bearer <FIREBASE_ID_TOKEN>
+    Header Case (AJAX):
+        Authorization: Bearer <ID_TOKEN>
 
-    Usage in a route:
-        @app.get("/profile")
-        async def profile(user=Depends(get_current_user)):
-            ...
+    Cookie Case (Browser Navigation):
+        Cookie: firebase_token=<ID_TOKEN>
 
     Raises:
-        HTTPException 401 if header is missing or token is invalid
+        HTTPException 401 if token is missing or invalid
     """
+    token = None
+    
+    # 1. Try Authorization Header
     auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+    
+    # 2. Try 'firebase_token' Cookie (fallthrough for direct browser access)
+    if not token:
+        token = request.cookies.get("firebase_token")
 
-    if not auth_header.startswith("Bearer "):
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or malformed Authorization header. Expected: 'Bearer <token>'",
+            detail="Missing authentication. Please sign in to access this page.",
         )
-
-    # Extract token — everything after "Bearer "
-    token = auth_header.split(" ", 1)[1].strip()
 
     return verify_firebase_token(token)

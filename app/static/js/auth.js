@@ -94,7 +94,7 @@ window.auth = {
 
 // ── UI Integration ──────────────────────────────────────────────────────────
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     const loginBtn = document.getElementById('loginBtn');
     const userNav = document.getElementById('userNav');
     const userName = document.getElementById('userName');
@@ -113,19 +113,27 @@ onAuthStateChanged(auth, (user) => {
             submitBtn.disabled = false;
             submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
+
+        // ── Necessary: Sync Token to Cookie for direct browser navigation ──
+        try {
+            const token = await user.getIdToken();
+            // Store token in a short-lived session cookie
+            document.cookie = `firebase_token=${token}; path=/; max-age=3600; SameSite=Lax`;
+            console.log("[Auth] Session cookie synced ✓");
+        } catch (err) {
+            console.error("[Auth] Cookie sync failed:", err);
+        }
+
     } else {
         // Logged Out
         if (loginBtn) loginBtn.classList.remove('hidden');
         if (userNav) userNav.classList.add('hidden');
 
+        // Clear session cookie
+        document.cookie = "firebase_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+
         // Disable features that require UID
         if (submitBtn && submitBtn.closest('form')?.action?.includes('/analyze')) {
-            // We can still allow analysis without login if desired, 
-            // but the prompt said "Protected routes must require Firebase token".
-            // Let's require it for upload-resume, but maybe keep basic analyze open?
-            // User said: "All data must be in Firebase and Cloudinary" 
-            // and "Create user document if it does not exist."
-            // We'll require login for file persistence.
             submitBtn.disabled = true;
             submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
             const btnText = document.getElementById('btnText');
