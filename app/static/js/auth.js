@@ -30,10 +30,15 @@ const provider = new GoogleAuthProvider();
 
 // ── Auth Actions ────────────────────────────────────────────────────────────
 
+let isLoggingIn = false;
+
 /**
  * Trigger Google Login Popup and sync with Backend.
  */
 async function loginWithGoogle() {
+    if (isLoggingIn) return; // Prevent concurrent popup requests
+    isLoggingIn = true;
+
     try {
         const result = await signInWithPopup(auth, provider);
         const token = await result.user.getIdToken();
@@ -55,9 +60,21 @@ async function loginWithGoogle() {
         }
     } catch (error) {
         console.error("[Auth] Login error:", error);
-        if (error.code !== 'auth/popup-closed-by-user') {
+
+        // Handle common non-critical errors silently
+        const silentErrors = [
+            'auth/popup-closed-by-user',
+            'auth/cancelled-popup-request',
+            'auth/popup-blocked'
+        ];
+
+        if (!silentErrors.includes(error.code)) {
             alert("Login failed: " + error.message);
+        } else if (error.code === 'auth/popup-blocked') {
+            alert("Please enable popups for this site to sign in.");
         }
+    } finally {
+        isLoggingIn = false;
     }
 }
 
