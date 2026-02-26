@@ -116,20 +116,27 @@ def get_user_files(uid: str) -> list[dict]:
 
 def get_all_users() -> list[dict]:
     """
-    Return all user profiles in the system, sorted by newest first.
+    Return all user profiles in the system.
+    Sorts by created_at in Python to ensure documents without the field are still returned.
     """
     db = _get_db()
-    docs = db.collection("users").order_by("created_at", direction=firestore.Query.DESCENDING).stream()
-    return [doc.to_dict() for doc in docs]
+    docs = db.collection("users").stream()
+    users = [doc.to_dict() for doc in docs]
+    # Sort by created_at desc, handle missing keys gracefully
+    users.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return users
 
 
 def get_all_files() -> list[dict]:
     """
-    Return all uploaded file records across all users, newest first.
+    Return all uploaded file records across all users.
+    Sorts by uploaded_at in Python to be resilient to missing fields.
     """
     db = _get_db()
-    docs = db.collection("files").order_by("uploaded_at", direction=firestore.Query.DESCENDING).stream()
-    return [doc.to_dict() for doc in docs]
+    docs = db.collection("files").stream()
+    files = [doc.to_dict() for doc in docs]
+    files.sort(key=lambda x: x.get("uploaded_at", ""), reverse=True)
+    return files
 
 
 # ── Audit Logs Collection ────────────────────────────────────────────────────
@@ -171,12 +178,11 @@ def get_audit_logs(uid: str) -> list[dict]:
 
 def get_all_audit_logs() -> list[dict]:
     """
-    Return all audit log entries across the entire system, sorted newest-first.
+    Return all audit log entries across the entire system.
     """
     db = _get_db()
-    docs = (
-        db.collection("audit_logs")
-        .order_by("timestamp", direction=firestore.Query.DESCENDING)
-        .stream()
-    )
-    return [doc.to_dict() for doc in docs]
+    docs = db.collection("audit_logs").stream()
+    logs = [doc.to_dict() for doc in docs]
+    # Sort by timestamp desc, fallback to empty string
+    logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    return logs

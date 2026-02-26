@@ -102,22 +102,28 @@ async def upload_resume(file) -> str:
             detail=f"File too large ({size_mb:.1f} MB). Maximum allowed is 5 MB.",
         )
 
-    # 4. Derive a clean public_id from the original filename
+    # 4. Derive a clean public_id and select resource type
+    # For browser viewing, PDFs work best as 'image' type in Cloudinary. 
+    # DOCX must remain 'raw'.
     original_name = (file.filename or "resume").rsplit(".", 1)[0]
-    # Sanitize: keep alphanum, dashes, underscores
     safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in original_name)
-    public_id = f"career-copilot/resumes/{safe_name}"
+    
+    extension = ALLOWED_TYPES.get(content_type, ".pdf")
+    # Including extension in public_id helps Cloudinary/Browsers identify the file
+    public_id = f"career-copilot/resumes/{safe_name}{extension}"
+    
+    # Use 'image' for PDFs to allow application/pdf headers (opening in browser)
+    res_type = "image" if extension == ".pdf" else "raw"
 
     # 5. Upload bytes to Cloudinary
-    # IMPORTANT: resource_type="raw" is required for PDFs and DOCX files.
-    # Without it, Cloudinary treats them as images and the upload fails.
     try:
         result = cloudinary.uploader.upload(
             io.BytesIO(file_bytes),
             public_id=public_id,
-            resource_type="raw",      # Required for PDF/DOCX
+            resource_type=res_type,
             overwrite=True,
-            use_filename=False,
+            use_filename=True,
+            unique_filename=False
         )
     except Exception as e:
         raise HTTPException(
