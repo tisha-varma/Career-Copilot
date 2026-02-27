@@ -102,21 +102,19 @@ async def upload_resume(file) -> str:
             detail=f"File too large ({size_mb:.1f} MB). Maximum allowed is 5 MB.",
         )
 
-    # 4. Derive a clean public_id with extension (required for raw storage to have correct filename in URL)
+    # 4. Derive a clean public_id (When using auto, Cloudinary handles extensions better)
     original_name = (file.filename or "resume").rsplit(".", 1)[0]
-    extension = (file.filename or "pdf").rsplit(".", 1)[-1]
     safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in original_name)
-    full_public_id = f"{safe_name}.{extension}"
     
-    print(f"[Cloudinary] Uploading {len(file_bytes)} bytes for '{file.filename}' as {full_public_id}")
+    print(f"[Cloudinary] Uploading {len(file_bytes)} bytes for '{file.filename}' as {safe_name}")
 
     # 5. Upload bytes to Cloudinary
     try:
         result = cloudinary.uploader.upload(
             io.BytesIO(file_bytes),
-            public_id=full_public_id,
+            public_id=safe_name,
             folder="career-copilot/resumes",
-            resource_type="raw",     # Force raw for PDFs/DOCX to ensure browser compatibility
+            resource_type="auto",     # Let Cloudinary identify PDF format for correct browser viewing
             overwrite=True,
             use_filename=True,
             unique_filename=True      # Use unique IDs to avoid browser cache issues
