@@ -280,7 +280,7 @@ def _create_score_visual(score, width):
     # Score arc (colored ring segment)
     angle = (score / 100) * 360
     if angle > 0:
-        d.add(Wedge(center_x, center_y, radius - 1, 90, 90 - angle,
+        d.add(Wedge(center_x, center_y, radius - 1, 90 - angle, 90,
                      fillColor=score_color, strokeColor=None))
         # Re-draw inner white to make it a ring
         d.add(Circle(center_x, center_y, radius - 8,
@@ -490,7 +490,7 @@ def create_analysis_report(analysis: Dict[str, Any], resume_preview: Dict[str, A
         ]))
         wrapper = Table([[notes_table]], colWidths=[page_width])
         wrapper.setStyle(TableStyle([('ALIGN', (0, 0), (-1, -1), 'CENTER')]))
-        story.append(Spacer(1, 6))
+        story.append(Spacer(1, 12))
         story.append(wrapper)
     
     # ── Strengths ───────────────────────────────────────────────

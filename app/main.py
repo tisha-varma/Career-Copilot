@@ -51,7 +51,10 @@ from firestore_db import (
     get_audit_logs,
     get_all_users,
     get_all_files,
-    get_all_audit_logs
+    get_all_audit_logs,
+    delete_user,
+    delete_file,
+    delete_audit_log
 )
 from cloudinary_storage import upload_resume as cloudinary_upload
 from audit import log_action
@@ -568,6 +571,18 @@ async def admin_dashboard(
     files = get_all_files()
     logs = get_all_audit_logs()
     
+    # Fetch feedback from CSV
+    feedback_entries = []
+    if FEEDBACK_FILE.exists():
+        try:
+            with open(FEEDBACK_FILE, mode='r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                feedback_entries = list(reader)
+                # Sort newest first
+                feedback_entries.reverse()
+        except Exception as e:
+            print(f"[Admin] Error reading feedback: {e}")
+
     return templates.TemplateResponse(
         "admin_dashboard.html",
         {
@@ -575,7 +590,8 @@ async def admin_dashboard(
             "admin": admin,
             "users": users,
             "files": files,
-            "logs": logs
+            "logs": logs,
+            "feedback": feedback_entries
         }
     )
 
@@ -621,6 +637,32 @@ async def admin_resumes(
     </html>
     """
     return HTMLResponse(content=html)
+
+
+# ── DELETE /admin/delete-user/{uid} ──────────────────────────
+@app.delete("/admin/delete-user/{uid}")
+async def admin_delete_user(uid: str, admin: dict = Depends(get_current_admin)):
+    """Delete a user profile."""
+    delete_user(uid)
+    log_action(admin["uid"], "DELETE_USER", f"Deleted user {uid}")
+    return {"status": "success"}
+
+
+# ── DELETE /admin/delete-file/{file_id} ──────────────────────
+@app.delete("/admin/delete-file/{file_id}")
+async def admin_delete_file(file_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a file record."""
+    delete_file(file_id)
+    log_action(admin["uid"], "DELETE_FILE", f"Deleted file record {file_id}")
+    return {"status": "success"}
+
+
+# ── DELETE /admin/delete-log/{log_id} ────────────────────────
+@app.delete("/admin/delete-log/{log_id}")
+async def admin_delete_log(log_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete an audit log record."""
+    delete_audit_log(log_id)
+    return {"status": "success"}
 
 
 # ── POST /verify-user ────────────────────────────────────────

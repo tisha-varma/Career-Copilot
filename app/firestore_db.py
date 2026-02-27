@@ -59,6 +59,13 @@ def create_or_update_user(uid: str, name: str, email: str, picture: str) -> dict
     return ref.get().to_dict()
 
 
+def delete_user(uid: str) -> bool:
+    """Delete a user document."""
+    db = _get_db()
+    db.collection("users").document(uid).delete()
+    return True
+
+
 def get_user(uid: str) -> dict | None:
     """
     Fetch a user document by uid.
@@ -139,6 +146,13 @@ def get_all_files() -> list[dict]:
     return files
 
 
+def delete_file(file_id: str) -> bool:
+    """Delete a file metadata document."""
+    db = _get_db()
+    db.collection("files").document(file_id).delete()
+    return True
+
+
 # ── Audit Logs Collection ────────────────────────────────────────────────────
 
 def save_audit_log(uid: str, action: str, details: str) -> None:
@@ -186,3 +200,10 @@ def get_all_audit_logs() -> list[dict]:
     # Sort by timestamp desc, fallback to empty string
     logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
     return logs
+
+
+def delete_audit_log(log_id: str) -> bool:
+    """Delete a single audit log entry."""
+    db = _get_db()
+    db.collection("audit_logs").document(log_id).delete()
+    return True
