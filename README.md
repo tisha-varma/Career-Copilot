@@ -1,4 +1,4 @@
-# 🚀 Career Copilot AI: Strategic AI Career Intelligence
+# 🚀 Career Copilot AI: Strategic Career Intelligence Suite
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -6,169 +6,219 @@
 [![Cloudinary](https://img.shields.io/badge/Cloudinary-Storage-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white)](https://cloudinary.com/)
 [![Groq](https://img.shields.io/badge/LLaMA%203.3-Groq-orange?style=for-the-badge)](https://groq.com/)
 
-**Career Copilot AI** is a professional-grade career optimization platform that leverages Large Language Models (LLMs) to transform static resumes into strategic career assets. By combining high-speed AI inference with cloud-native persistence, it provides job seekers with deep analysis, precision fit-scoring, and personalized interview intelligence.
+---
+
+## 📖 Project Description
+**Career Copilot AI** is a professional-grade career optimization platform that integrates Large Language Models (LLMs) with cloud-native infrastructure to transform static resumes into strategic career assets. 
+
+In a modern job market driven by ATS and precise role-fit, Career Copilot provides job seekers with **semantic analysis**, **predictive interview intelligence**, and **automated asset generation**. It doesn't just scan for keywords; it understands the *intent* and *impact* of a user's professional journey, bridging the gap between current experience and future goals.
 
 ---
 
-## 🏗️ System Architecture & Data Flow
+## ✨ Detailed Features
 
-The system is built on a modern, asynchronous architecture designed for high performance and scalability.
+### 🔍 **1. Cognitive Resume Auditing**
+- **Semantic Pathfinding**: Uses LLaMA 3.3 to benchmark your resume against 12+ industry-specific roles (AI Engineer, Product Manager, DevOps, etc.).
+- **Affinity Scoring**: A weighted percentage match based on technical skills, soft skills, and leadership experience.
+- **Skill Gap Mapping**: Identifies "Critical Missing Keywords" and provides a prioritized learning roadmap with curated resources.
 
-### 1. High-Level Architecture
-```mermaid
-graph TD
-    subgraph Client_Layer
-        User(User / Candidate)
-        Admin(Platform Administrator)
-    end
+### 🎤 **2. Predictive Interview Intelligence**
+- **Resume-Contextual Questions**: AI analyzes your specific projects and tenure to generate the exact questions a recruiter is likely to ask *you*.
+- **STAR Framework Guidance**: Interactive tips for structuring behavioral answers that emphasize impact and results.
+- **On-Demand Generation**: Use the AJAX-powered engine to generate fresh questions any time you refresh your strategy.
 
-    subgraph API_Layer[FastAPI Backend - Railway]
-        Auth[Firebase Auth Middleware]
-        Parser[Resume Parsing Engine]
-        Analyzer[LLaMA 3.3 Analyzer]
-        Generator[Report PDF Engine]
-        Dash[Admin Dashboard Logic]
-    end
+### 📄 **3. Automated Professional Assets**
+- **High-Conversion Cover Letters**: Generates context-aware letters that map your unique achievements directly to a job description.
+- **Career Analysis Reports**: Downloadable, high-fidelity PDF reports featuring role-fit charts and detailed strategic advice.
 
-    subgraph Data_Storage
-        Firestore[(Google Firestore - Metadata)]
-        Cloudinary[Cloudinary - Asset Hosting]
-        LocalFiles[(Local JSON / CSV - Sessions & Logs)]
-    end
-
-    User -->|Google OAuth| Auth
-    User -->|Upload PDF| Parser
-    Parser -->|Context Extraction| Analyzer
-    Analyzer -->|Strategic Insights| Generator
-    Generator -->|Download Results| User
-    Analyzer -->|Metadata| Firestore
-    Parser -->|Original Resume| Cloudinary
-    Admin -->|CRUD Operations| Dash
-    Dash -->|Audit Logs| LocalFiles
-    Dash -->|Data Access| Firestore
-```
-
-### 2. AI Intelligence Pipeline
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant P as Parser (pdfplumber)
-    participant A as AI Engine (LLaMA 3.3)
-    participant G as PDF Generator (ReportLab)
-
-    U->>P: Upload PDF Resume
-    P->>P: Extract Structured Text
-    P-->>A: Raw Context + Target Roles
-    A->>A: Semantic Similarity Analysis
-    A->>A: Gap Identification
-    A->>A: Interview Prediction
-    A-->>G: Structured Analysis Data
-    G->>G: Build Visualization Charts
-    G-->>U: Final Career Analysis Report (PDF)
-```
-
----
-
-## ✨ Key Features
-
-### 📊 **Diagnostic Intelligence**
-- **Semantic Affinity Scoring**: Analyzes resumes against 12+ industry sectors using semantic mapping rather than simple keyword matching.
-- **Skill-Gap Pathfinding**: Identifies specific technical and soft skill deficits and provides a prioritized acquisition roadmap.
-- **Role-Aware Optimization**: Benchmarks experience against roles such as AI Engineer, Full-Stack Dev, Data Scientist, and Product Manager.
-
-### 🎤 **Strategic Interview Prep**
-- **Predictive Behavioral Q&A**: Generates questions based on the unique intersection of a user's background and their target role requirements.
-- **STAR Method Integration**: Provides expert tips for structuring high-impact answers.
-- **Curated Learning**: Mapped YouTube resources for instant skill reinforcement.
-
-### 🔐 **Enterprise Infrastructure**
-- **Google OAuth 2.0**: Secure authentication via Firebase, ensuring user data privacy.
-- **Cloud-Native Persistence**: Distributed storage using **Google Firestore** and **Cloudinary** for resilient asset management.
-- **Real-Time Audit Trail**: Internal logging of all critical system actions for monitoring and security.
+### 📊 **4. Admin Intelligence Dashboard**
+- **Live Monitoring**: Real-time visibility into user growth, file uploads, and system interactions.
+- **Audit Logging**: A robust internal tracking system that captures logins and system changes for security.
+- **Feedback Loop**: Integrated user feedback system with full CSV export capabilities for administrative review.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Core Framework**: [FastAPI](https://fastapi.tiangolo.com/) (High-performance Async Python)
-- **AI/LLM Engine**: [LLaMA 3.3 (70B)](https://groq.com/) via Groq Cloud
-- **Global Auth**: [Firebase Authentication](https://firebase.google.com/hub) (Google Login 3rd Party Provider)
-- **Primary Data Store**: [Google Cloud Firestore](https://firebase.google.com/docs/firestore) (NoSQL)
-- **Asset Storage**: [Cloudinary](https://cloudinary.com/) (MIME-optimized resume hosting)
-- **Data Visualization**: [Matplotlib](https://matplotlib.org/) & [ReportLab](https://pypi.org/project/reportlab/)
-- **UI Architecture**: Tailwind CSS & Jinja2 Template Engine
+| Layer | Technology |
+| :--- | :--- |
+| **Backend Core** | [FastAPI](https://fastapi.tiangolo.com/) (Asynchronous Python) |
+| **AI Processing** | [LLaMA 3.3 (70B)](https://groq.com/) via Groq Cloud |
+| **Authentication** | [Firebase Auth](https://firebase.google.com/) (Google OAuth 2.0) |
+| **Data Persistence** | [Google Cloud Firestore](https://firebase.google.com/docs/firestore) |
+| **Asset Management** | [Cloudinary](https://cloudinary.com/) (Cloud File Hosting) |
+| **Reporting** | [ReportLab](https://pypi.org/project/reportlab/) & [Matplotlib](https://matplotlib.org/) |
+| **Styling** | Tailwind CSS & Jinja2 Templates |
+| **Deployment** | [Railway](https://railway.app/) |
 
 ---
 
-## 📂 Project Structure
+## 🏗️ Detailed Architecture
 
-```text
-career-copilot/
-├── app/
-│   ├── main.py              # Central Routing & Lifecycle Management
-│   ├── llama_analyzer.py    # LLM Prompt Engineering & Analysis
-│   ├── firestore_db.py      # Firestore Collection Management
-│   ├── firebase_auth.py     # OAuth Helper & User Session Logic
-│   ├── cloudinary_storage.py # Cloud Asset Management (MIME-aware)
-│   ├── report_generator.py  # Precision PDF Logic (ReportLab)
-│   ├── pdf_generator.py     # Asset Generation (Cover Letters)
-│   ├── audit.py             # System Logging & Audit Trail
-│   ├── static/              # Tailwind CSS & Interactive JS
-│   └── templates/           # UI Components & Admin Dashboard
-├── data/                    # Local State (Feedback & Sessions)
-├── Procfile                 # Production Build Config (Railway)
-├── requirements.txt         # Dependency Manifest
-└── README.md                # System Documentation
+### **System Data Flow**
+```mermaid
+graph TD
+    subgraph Client_Experience
+        U(Candidate)
+        A(Administrator)
+    end
+
+    subgraph API_Orchestration[FastAPI Backend]
+        Auth[Firebase Middleware]
+        Parser[PDF Extractor]
+        LLM[LLaMA 3.3 Engine]
+        PDF[PDF Report Generator]
+    end
+
+    subgraph Persistence_Layer
+        FS[(Firestore DB)]
+        CD[Cloudinary CDN]
+        SL[(Local Session/Audit Logs)]
+    end
+
+    U -->|Login| Auth
+    U -->|Upload PDF| Parser
+    Parser -->|Context| LLM
+    LLM -->|Scoring| FS
+    Parser -->|Storage| CD
+    LLM -->|Data| PDF
+    PDF -->|Report| U
+    A -->|Monitor| FS
+    A -->|Review| SL
+```
+
+### **Analysis Pipeline**
+```mermaid
+sequenceDiagram
+    participant User
+    participant FastAPI
+    participant LLaMA_3.3
+    participant Firestore
+    participant Cloudinary
+
+    User->>FastAPI: Upload Resume (PDF)
+    FastAPI->>Cloudinary: Store original file
+    FastAPI->>FastAPI: Parse text (pdfplumber)
+    FastAPI->>LLaMA_3.3: Analyze Experience vs Roles
+    LLA_MA_3.3-->>FastAPI: Return JSON Scoring & Gap Analysis
+    FastAPI->>Firestore: Cache Results & File Metadata
+    FastAPI-->>User: Render Interactive Dashboard
 ```
 
 ---
 
-## 🚀 Installation & Setup
+## 🚀 Installation
 
-### 1. Prerequisites
+### 1. Requirements
 - Python 3.12+
-- Google Cloud / Firebase Account
-- Cloudinary Account
-- Groq Cloud API Key
+- Node/NPM (Optional for Tailwind development)
 
-### 2. Deployment Steps
+### 2. Local Setup
 ```bash
+# Clone the repository
 git clone https://github.com/tisha-varma/Career-Copilot.git
 cd Career-Copilot
+
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Identity & Credentials
-Create a `.env` file in the root:
+---
+
+## 🔑 Environment Variables
+
+Create a `.env` file in the project root:
+
 ```env
-GROQ_API_KEY=your_groq_key
+# AI Intelligence
+GROQ_API_KEY=your_groq_cloud_key
+
+# Asset Hosting
 CLOUDINARY_URL=your_cloudinary_url
-ADMIN_EMAILS=admin@example.com
-# Place your Firebase Admin SDK JSON in the /app folder
+
+# Identity & Security
+ADMIN_EMAILS=user1@gmail.com,user2@gmail.com
+SESSIONS_DIR=_sessions
+
+# Firebase Setup
+# Ensure firebase-adminsdk.json is present in /app directory
 ```
 
-### 4. Direct Launch
-```bash
-cd app
-python main.py
+---
+
+## 🖥️ Usage
+
+1. **Identity**: Sign in with Google to create your personalized profile.
+2. **Analysis**: Upload your PDF resume. The system will benchmark you against market standards.
+3. **Strategize**: Review your role-fit score and technical gap analysis.
+4. **Prepare**: Use the "Interview Prep" section to generate AI-tailored questions for your target role.
+5. **Generate**: Create cover letters and download your comprehensive Career Analysis Report.
+
+---
+
+## 🔌 API Endpoints (Core)
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/analyze` | POST | Parses resume and generates full career insights |
+| `/download-report` | GET | Generates and exports the Career Analysis PDF |
+| `/generate-resume-questions` | GET | AJAX endpoint for AI question prep |
+| `/submit-feedback` | POST | Submits user ratings for system improvement |
+| `/admin/dashboard` | GET | **(Admin)** Central monitoring command center |
+| `/admin/delete-user/{uid}` | DELETE | **(Admin)** Secure profile removal |
+
+---
+
+## 🖼️ Screenshots Section
+
+> [!NOTE]
+> Add production screenshots here to showcase the premium Glassmorphism UI of the Landing Page, Dashboard, and Analysis Reports.
+
+---
+
+## 📂 Folder Structure
+
+```text
+Career-Copilot/
+├── app/                     # Main Application Logic
+│   ├── main.py              # Central Router & Lifecycle
+│   ├── llama_analyzer.py    # LLM Analysis Logic
+│   ├── firestore_db.py      # Firestore Repository
+│   ├── cloudinary_storage.py# Asset Hosting Service
+│   ├── report_generator.py  # ReportLab Orchestration
+│   ├── audit.py             # Internal System Logging
+│   ├── static/              # Visual CSS/JS Assets
+│   └── templates/           # Jinja2 Dashboard Layouts
+├── data/                    # Feedback and Local Sessions
+└── requirements.txt         # Core Dependencies
 ```
-Open `http://localhost:8000` to access the platform.
 
 ---
 
-## 📊 Administrator Intelligence Suite
-
-The system features a centralized **Administrator Dashboard** for real-time monitoring:
-- **User Discovery**: Track user registration and profile trends.
-- **Audit Monitoring**: Live visibility into critical system events and security logs.
-- **Feedback Management**: Analyze user satisfaction with integrated CSV export.
-- **Asset Governance**: Direct CRUD control over user profiles and stored resumes.
+## 🔮 Future Improvements
+- [ ] **ATS Optimization Score**: A dedicated feature to maximize resume pass-through.
+- [ ] **Mock Voice Interviews**: Integration with ElevenLabs for roleplay simulations.
+- [ ] **Browser Extensions**: Quick analyze features for LinkedIn job postings.
 
 ---
 
-## 🤝 Contributors
-Developed with precision by **Tisha Varma**. Focused on bridging the gap between talent and opportunity through advanced AI.
+## 🤝 Contributing
+Contributions are welcome! Please follow these steps:
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
-*Project created for technical demonstration and career empowerment.*
+## ⚖️ License
+Distributed under the **MIT License**. See `LICENSE` for more information.
+
+---
+
+Built with ❤️ by **Tisha Varma**. Helping the world navigate the future of work.
