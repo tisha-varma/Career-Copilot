@@ -1,134 +1,174 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
-  <img src="https://img.shields.io/badge/FastAPI-0.104+-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/>
-  <img src="https://img.shields.io/badge/LLaMA%203.3-Groq-orange?style=for-the-badge" alt="LLaMA"/>
-  <img src="https://img.shields.io/badge/Railway-Deploys-000000?style=for-the-badge&logo=railway&logoColor=white" alt="Railway"/>
-</p>
+# 🚀 Career Copilot AI: Strategic AI Career Intelligence
 
-<h1 align="center">🚀 Career Copilot AI</h1>
+[![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=white)](https://firebase.google.com/)
+[![Cloudinary](https://img.shields.io/badge/Cloudinary-Storage-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white)](https://cloudinary.com/)
+[![Groq](https://img.shields.io/badge/LLaMA%203.3-Groq-orange?style=for-the-badge)](https://groq.com/)
 
-<p align="center">
-  <strong>The Ultimate AI-Powered Carrier Guidance & Resume Optimization Platform</strong><br>
-  Analyze your resume, generate high-conversion career assets, and prepare for interviews with precision.
-</p>
-
-<p align="center">
-  <a href="#-key-features">Features</a> •
-  <a href="#-production-readiness">Production Ready</a> •
-  <a href="#-tech-stack">Tech Stack</a> •
-  <a href="#-quick-start">Quick Start</a> •
-  <a href="#-deployment-on-railway">Deployment</a> •
-  <a href="#-feedback-system">Feedback</a>
-</p>
+**Career Copilot AI** is a professional-grade career optimization platform that leverages Large Language Models (LLMs) to transform static resumes into strategic career assets. By combining high-speed AI inference with cloud-native persistence, it provides job seekers with deep analysis, precision fit-scoring, and personalized interview intelligence.
 
 ---
 
-## 🎯 What is Career Copilot AI?
+## 🏗️ System Architecture & Data Flow
 
-**Career Copilot AI** is a professional-grade platform designed to help job seekers land their dream roles. Unlike simple resume scanners, it uses a **multi-agent AI workflow** to provide deep insights, personalized learning plans, and optimized interview preparation.
+The system is built on a modern, asynchronous architecture designed for high performance and scalability.
+
+### 1. High-Level Architecture
+```mermaid
+graph TD
+    subgraph Client_Layer
+        User(User / Candidate)
+        Admin(Platform Administrator)
+    end
+
+    subgraph API_Layer[FastAPI Backend - Railway]
+        Auth[Firebase Auth Middleware]
+        Parser[Resume Parsing Engine]
+        Analyzer[LLaMA 3.3 Analyzer]
+        Generator[Report PDF Engine]
+        Dash[Admin Dashboard Logic]
+    end
+
+    subgraph Data_Storage
+        Firestore[(Google Firestore - Metadata)]
+        Cloudinary[Cloudinary - Asset Hosting]
+        LocalFiles[(Local JSON / CSV - Sessions & Logs)]
+    end
+
+    User -->|Google OAuth| Auth
+    User -->|Upload PDF| Parser
+    Parser -->|Context Extraction| Analyzer
+    Analyzer -->|Strategic Insights| Generator
+    Generator -->|Download Results| User
+    Analyzer -->|Metadata| Firestore
+    Parser -->|Original Resume| Cloudinary
+    Admin -->|CRUD Operations| Dash
+    Dash -->|Audit Logs| LocalFiles
+    Dash -->|Data Access| Firestore
+```
+
+### 2. AI Intelligence Pipeline
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant P as Parser (pdfplumber)
+    participant A as AI Engine (LLaMA 3.3)
+    participant G as PDF Generator (ReportLab)
+
+    U->>P: Upload PDF Resume
+    P->>P: Extract Structured Text
+    P-->>A: Raw Context + Target Roles
+    A->>A: Semantic Similarity Analysis
+    A->>A: Gap Identification
+    A->>A: Interview Prediction
+    A-->>G: Structured Analysis Data
+    G->>G: Build Visualization Charts
+    G-->>U: Final Career Analysis Report (PDF)
+```
 
 ---
 
 ## ✨ Key Features
 
-### 📊 **Deep Resume Analysis**
-- **Smart Parsing**: Extract skills and experience using `pdfplumber`.
-- **Match Scoring**: Get an instant percentage match against 12+ industry roles.
-- **Skill Gap Roadmap**: Receive a prioritized plan to acquire missing technical and soft skills.
+### 📊 **Diagnostic Intelligence**
+- **Semantic Affinity Scoring**: Analyzes resumes against 12+ industry sectors using semantic mapping rather than simple keyword matching.
+- **Skill-Gap Pathfinding**: Identifies specific technical and soft skill deficits and provides a prioritized acquisition roadmap.
+- **Role-Aware Optimization**: Benchmarks experience against roles such as AI Engineer, Full-Stack Dev, Data Scientist, and Product Manager.
 
-### 🎤 **Personalized Interview Preparation**
-- **AI-Generated Questions**: Questions specifically tailored to *your* unique background.
-- **Role-specific preparation**: Targeted prep for Frontend, Backend, AI Engineer, and more.
-- **Expert Tips**: Detailed guidance on answering behavioral questions using the STAR method.
+### 🎤 **Strategic Interview Prep**
+- **Predictive Behavioral Q&A**: Generates questions based on the unique intersection of a user's background and their target role requirements.
+- **STAR Method Integration**: Provides expert tips for structuring high-impact answers.
+- **Curated Learning**: Mapped YouTube resources for instant skill reinforcement.
 
-### ✉️ **High-Conversion Cover Letter Generator**
-- **Context-Aware**: Generates letters based on your specific projects and achievements.
-- **PDF Export**: Download professional, recruiter-ready cover letters instantly.
-- **Automatic Name Detection**: Pre-fills your details directly from your resume.
-
-### 🔍 **Smart Job Discovery**
-- **Role-Specific Strategy**: AI-generated search strategies for your target role.
-- **One-Click Search**: Pre-configured filters for LinkedIn, Google Jobs, and Indeed.
-
----
-
-## 🛡️ Production-Ready Features
-
-This version has been optimized for high-reliability cloud deployment:
-
-- **🔄 Persistent Sessions**: Robust file-based session management. Your data survives server restarts and works perfectly across multiple web-workers.
-- **⚡ Rate Limiting**: Built-in protection against API abuse (per-IP rate limiting).
-- **💾 Consolidated Storage**: All persistent data (resumes, sessions, feedback) is stored in a unified `/app/data/` folder for easy cloud volume mounting.
-- **🛡️ Input Validation**: Strict validation for file uploads (PDF only, 10MB limit) and role selection.
-- **🏠 Resume Session**: Accidentally refreshed? The homepage detects your last analysis so you can resume instantly.
+### 🔐 **Enterprise Infrastructure**
+- **Google OAuth 2.0**: Secure authentication via Firebase, ensuring user data privacy.
+- **Cloud-Native Persistence**: Distributed storage using **Google Firestore** and **Cloudinary** for resilient asset management.
+- **Real-Time Audit Trail**: Internal logging of all critical system actions for monitoring and security.
 
 ---
 
 ## 🛠️ Tech Stack
 
-### **Core Backend**
-- **FastAPI**: Modern, high-performance Python web framework.
-- **Groq/LLaMA 3.3**: Ultra-fast LLM inference for analysis and generation.
-- **pdfplumber**: High-fidelity PDF text extraction.
-- **ReportLab**: Dynamic PDF generation for career reports.
-
-### **Intelligence & Data**
-- **Persistent Sessions**: JSON-based file storage for multi-worker environments.
-- **ChromaDB**: Native vector storage for semantic resume matching.
-- **Sentence Transformers**: Local embedding generation for fast processing.
-
-### **Frontend & UI**
-- **Tailwind CSS**: Premium, responsive glassmorphism design.
-- **Jinja2**: Server-side template rendering.
+- **Core Framework**: [FastAPI](https://fastapi.tiangolo.com/) (High-performance Async Python)
+- **AI/LLM Engine**: [LLaMA 3.3 (70B)](https://groq.com/) via Groq Cloud
+- **Global Auth**: [Firebase Authentication](https://firebase.google.com/hub) (Google Login 3rd Party Provider)
+- **Primary Data Store**: [Google Cloud Firestore](https://firebase.google.com/docs/firestore) (NoSQL)
+- **Asset Storage**: [Cloudinary](https://cloudinary.com/) (MIME-optimized resume hosting)
+- **Data Visualization**: [Matplotlib](https://matplotlib.org/) & [ReportLab](https://pypi.org/project/reportlab/)
+- **UI Architecture**: Tailwind CSS & Jinja2 Template Engine
 
 ---
 
-## 🚀 Quick Start
+## 📂 Project Structure
 
-### 1. Initial Setup
+```text
+career-copilot/
+├── app/
+│   ├── main.py              # Central Routing & Lifecycle Management
+│   ├── llama_analyzer.py    # LLM Prompt Engineering & Analysis
+│   ├── firestore_db.py      # Firestore Collection Management
+│   ├── firebase_auth.py     # OAuth Helper & User Session Logic
+│   ├── cloudinary_storage.py # Cloud Asset Management (MIME-aware)
+│   ├── report_generator.py  # Precision PDF Logic (ReportLab)
+│   ├── pdf_generator.py     # Asset Generation (Cover Letters)
+│   ├── audit.py             # System Logging & Audit Trail
+│   ├── static/              # Tailwind CSS & Interactive JS
+│   └── templates/           # UI Components & Admin Dashboard
+├── data/                    # Local State (Feedback & Sessions)
+├── Procfile                 # Production Build Config (Railway)
+├── requirements.txt         # Dependency Manifest
+└── README.md                # System Documentation
+```
+
+---
+
+## 🚀 Installation & Setup
+
+### 1. Prerequisites
+- Python 3.12+
+- Google Cloud / Firebase Account
+- Cloudinary Account
+- Groq Cloud API Key
+
+### 2. Deployment Steps
 ```bash
 git clone https://github.com/tisha-varma/Career-Copilot.git
 cd Career-Copilot
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure API Keys
-Create a `keys` file or set environment variables:
-```bash
-export GROQ_API_KEY="your_api_key_here"
+### 3. Identity & Credentials
+Create a `.env` file in the root:
+```env
+GROQ_API_KEY=your_groq_key
+CLOUDINARY_URL=your_cloudinary_url
+ADMIN_EMAILS=admin@example.com
+# Place your Firebase Admin SDK JSON in the /app folder
 ```
 
-### 3. Run Locally
+### 4. Direct Launch
 ```bash
 cd app
-python -m uvicorn main:app --reload
+python main.py
 ```
-Navigate to `http://127.0.0.1:8000`
+Open `http://localhost:8000` to access the platform.
 
 ---
 
-## 🚅 Deployment on Railway
+## 📊 Administrator Intelligence Suite
 
-This app is pre-configured for **Railway** deployment:
-
-1. **GitHub Connection**: Link this repository to your Railway project.
-2. **Persistent Volume (Vital)**: 
-   - Mount a volume to: `/app/app/data`
-   - *This ensures your resumes, sessions, and feedback remain safe during deployments.*
-3. **Environment Variables**: Add your `GROQ_API_KEY`.
-4. **Build Config**: The `Procfile` is automatically detected to start the server.
+The system features a centralized **Administrator Dashboard** for real-time monitoring:
+- **User Discovery**: Track user registration and profile trends.
+- **Audit Monitoring**: Live visibility into critical system events and security logs.
+- **Feedback Management**: Analyze user satisfaction with integrated CSV export.
+- **Asset Governance**: Direct CRUD control over user profiles and stored resumes.
 
 ---
 
-## 📝 Feedback & Insights
-
-We value continuous improvement!
-- Users can submit feedback directly from the results page.
-- **Administrator Export**: Download the collected feedback in an Excel-ready format (`.csv`) by visiting:
-  `your-app-url.railway.app/export-feedback-csv`
+## 🤝 Contributors
+Developed with precision by **Tisha Varma**. Focused on bridging the gap between talent and opportunity through advanced AI.
 
 ---
 
-Built with ❤️ by **Tisha Varma** for job seekers everywhere.
+*Project created for technical demonstration and career empowerment.*
