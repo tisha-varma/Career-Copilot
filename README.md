@@ -40,19 +40,49 @@ In a modern job market driven by ATS and precise role-fit, Career Copilot provid
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-| :--- | :--- |
-| **Backend Core** | [FastAPI](https://fastapi.tiangolo.com/) (Asynchronous Python) |
-| **AI Processing** | [LLaMA 3.3 (70B)](https://groq.com/) via Groq Cloud |
-| **Authentication** | [Firebase Auth](https://firebase.google.com/) (Google OAuth 2.0) |
-| **Data Persistence** | [Google Cloud Firestore](https://firebase.google.com/docs/firestore) |
-| **Asset Management** | [Cloudinary](https://cloudinary.com/) (Cloud File Hosting) |
-| **Reporting** | [ReportLab](https://pypi.org/project/reportlab/) & [Matplotlib](https://matplotlib.org/) |
-| **Styling** | Tailwind CSS & Jinja2 Templates |
-| **Deployment** | [Railway](https://railway.app/) |
+### Languages
 
+- **Python 3.12+** – Core backend development and AI orchestration
+- **JavaScript (ES6+)** – Client-side interactivity and dynamic updates
+- **HTML5 & CSS3** – Web interface structure and styling
+
+### Frameworks & Libraries
+
+- **FastAPI** – High-performance asynchronous backend framework
+- **Tailwind CSS** – Modern UI design and styling
+- **Jinja2** – Dynamic HTML templating
+- **ReportLab** – PDF report generation
+- **Matplotlib** – Data visualization and charts
+- **pdfplumber** – Resume text extraction from PDFs
+- **Gunicorn** – Production server for deployment
+
+### Cloud & Platforms
+
+- **Railway** – Application deployment and hosting
+- **Google Cloud Platform (GCP)** – Cloud infrastructure services
+- **Firebase Authentication** – Secure Google login
+- **Cloudinary** – Resume storage and file management
+
+### Databases
+
+- **Google Cloud Firestore** – NoSQL database for user data and metadata
+- **ChromaDB** – Vector database for semantic search and AI retrieval
+- **CSV / JSON Storage** – Lightweight local persistence
+
+### APIs & AI
+
+- **Groq Cloud API** – Fast LLM inference
+- **LLaMA 3 (70B)** – Resume analysis and career guidance
+- **Firebase Admin SDK** – Backend authentication integration
+- **Cloudinary Upload API** – File upload and storage
+
+### Dev Tools
+
+- **Git & GitHub** – Version control
+- **pip** – Dependency management
+- **python-dotenv** – Environment variable management
+- **Mermaid.js** – Architecture diagrams
 ---
-
 ## 🏗️ Detailed Architecture
 
 ### **System Data Flow**
