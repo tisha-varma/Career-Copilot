@@ -68,12 +68,15 @@ _init_cloudinary()
 
 # ── Upload Function ──────────────────────────────────────────────────────────
 
-async def upload_resume(file) -> str:
+async def upload_resume(file=None, *, file_bytes: bytes = None, filename: str = None, content_type: str = None) -> str:
     """
     Validate and upload a resume file to Cloudinary.
 
     Args:
-        file: FastAPI UploadFile object
+        file:         FastAPI UploadFile object (legacy — avoid for reliability)
+        file_bytes:   Pre-read raw PDF bytes (preferred — avoids stream corruption)
+        filename:     Original filename (required when using file_bytes)
+        content_type: MIME type (required when using file_bytes)
 
     Returns:
         Secure Cloudinary URL (str)
@@ -82,19 +85,26 @@ async def upload_resume(file) -> str:
         HTTPException 400 — invalid type or file too large
         HTTPException 500 — Cloudinary upload failed
     """
+    # Resolve parameters — prefer explicit bytes over re-reading UploadFile
+    if file_bytes is None:
+        if file is None:
+            raise HTTPException(status_code=400, detail="No file provided.")
+        content_type = content_type or file.content_type or ""
+        filename = filename or file.filename or "resume"
+        await file.seek(0)
+        file_bytes = await file.read()
+    else:
+        content_type = content_type or "application/pdf"
+        filename = filename or "resume.pdf"
+
     # 1. Validate content type
-    content_type = file.content_type or ""
     if content_type not in ALLOWED_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid file type '{content_type}'. Allowed: PDF, DOCX.",
         )
 
-    # 2. Reset pointer and read file as bytes
-    await file.seek(0)
-    file_bytes = await file.read()
-
-    # 3. Validate file size (must happen AFTER reading)
+    # 2. Validate file size
     if len(file_bytes) > MAX_FILE_SIZE:
         size_mb = len(file_bytes) / (1024 * 1024)
         raise HTTPException(
@@ -102,13 +112,13 @@ async def upload_resume(file) -> str:
             detail=f"File too large ({size_mb:.1f} MB). Maximum allowed is 5 MB.",
         )
 
-    # 4. Derive a clean public_id (When using auto, Cloudinary handles extensions better)
-    original_name = (file.filename or "resume").rsplit(".", 1)[0]
+    # 3. Derive a clean public_id
+    original_name = filename.rsplit(".", 1)[0]
     safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in original_name)
     
-    print(f"[Cloudinary] Uploading {len(file_bytes)} bytes for '{file.filename}' as {safe_name}")
+    print(f"[Cloudinary] Uploading {len(file_bytes)} bytes for '{filename}' as {safe_name}")
 
-    # 5. Upload bytes to Cloudinary
+    # 4. Upload bytes to Cloudinary
     try:
         result = cloudinary.uploader.upload(
             io.BytesIO(file_bytes),

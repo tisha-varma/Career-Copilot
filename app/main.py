@@ -155,8 +155,12 @@ async def analyze(
         
         # Save resume to external storage
         try:
-            # 1. Upload to Cloudinary (passing the UploadFile object)
-            file_url = await cloudinary_upload(resume)
+            # 1. Upload to Cloudinary (pass raw bytes to avoid stream corruption)
+            file_url = await cloudinary_upload(
+                file_bytes=file_bytes,
+                filename=resume.filename or "resume.pdf",
+                content_type=resume.content_type or "application/pdf",
+            )
             
             # 2. Save metadata to Firestore
             save_file_metadata(
