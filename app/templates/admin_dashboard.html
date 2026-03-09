@@ -211,7 +211,7 @@
                                 </td>
                                 <td class="px-8 py-5 text-right pr-12">
                                     <div class="flex justify-end space-x-4">
-                                        <a href="{{ file.file_url|replace('/image/upload/', '/raw/upload/') }}"
+                                        <a href="https://docs.google.com/gview?url={{ file.file_url|urlencode }}&embedded=true"
                                             target="_blank"
                                             class="text-indigo-600 hover:text-indigo-800 font-semibold text-sm underline">View</a>
                                         <button onclick="deleteItem('file', '{{ file.id }}')"
