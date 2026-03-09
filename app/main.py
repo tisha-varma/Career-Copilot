@@ -193,6 +193,8 @@ async def analyze(
         # Store in user-specific session
         update_session(session_id, {
             "uid": user['uid'],
+            "user_name": user.get('name', ''),
+            "user_email": user.get('email', ''),
             "resume_text": resume_text,
             "role": role,
             "analysis": analysis,
@@ -228,7 +230,9 @@ async def results(request: Request):
         {
             "request": request,
             "analysis": analysis,
-            "resume_preview": get_session_data(request, "resume_preview", {})
+            "resume_preview": get_session_data(request, "resume_preview", {}),
+            "user_name": get_session_data(request, "user_name", ""),
+            "user_email": get_session_data(request, "user_email", ""),
         }
     )
 
@@ -571,6 +575,9 @@ async def admin_dashboard(
     files = get_all_files()
     logs = get_all_audit_logs()
     
+    # Build UID → user-name map for consistent alias display
+    user_map = {u["uid"]: u.get("name", "") for u in users if u.get("uid")}
+    
     # Fetch feedback from CSV
     feedback_entries = []
     if FEEDBACK_FILE.exists():
@@ -591,7 +598,8 @@ async def admin_dashboard(
             "users": users,
             "files": files,
             "logs": logs,
-            "feedback": feedback_entries
+            "feedback": feedback_entries,
+            "user_map": user_map,
         }
     )
 
