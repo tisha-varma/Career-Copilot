@@ -114,7 +114,7 @@ async def upload_resume(file) -> str:
             io.BytesIO(file_bytes),
             public_id=safe_name,
             folder="career-copilot/resumes",
-            resource_type="auto",     # Let Cloudinary identify PDF format for correct browser viewing
+            resource_type="raw",      # Serve PDFs as raw files so browsers can display them natively
             overwrite=True,
             use_filename=True,
             unique_filename=True      # Use unique IDs to avoid browser cache issues
