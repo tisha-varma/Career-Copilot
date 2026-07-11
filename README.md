@@ -205,9 +205,19 @@ SESSIONS_DIR=_sessions
 ---
 
 ## 🖼️ Screenshots Section
+<img width="1905" height="867" alt="image" src="https://github.com/user-attachments/assets/b284db40-a270-4adb-8382-0cfb8beac365" />
+<img width="1917" height="862" alt="image" src="https://github.com/user-attachments/assets/1fbdbfb2-0ad7-4741-94f7-2a963813729c" />
+<img width="1918" height="1078" alt="image" src="https://github.com/user-attachments/assets/b28582ff-0296-4462-b057-864bf4960ad4" />
+<img width="1918" height="1077" alt="image" src="https://github.com/user-attachments/assets/c0dfdcfb-da6a-4cd0-b7aa-b2f4442e0402" />
+<img width="1918" height="1078" alt="image" src="https://github.com/user-attachments/assets/25d698eb-e923-4e3e-8808-5d43de62947a" />
+<img width="1907" height="1067" alt="image" src="https://github.com/user-attachments/assets/21d66efb-459e-4b2c-bb64-58bbc6c39930" />
+<img width="1918" height="1078" alt="image" src="https://github.com/user-attachments/assets/08920c52-2443-4643-b8c6-aedb47b5e652" />
+<img width="1917" height="1078" alt="image" src="https://github.com/user-attachments/assets/6e5b97bf-1f85-47b7-9e35-e25b2cf8d20c" />
+<img width="1917" height="911" alt="image" src="https://github.com/user-attachments/assets/90ef21b3-cfcc-4994-9ca9-f4ac7c18ba7c" />
 
-> [!NOTE]
-> Add production screenshots here to showcase the premium Glassmorphism UI of the Landing Page, Dashboard, and Analysis Reports.
+
+<img width="922" height="1067" alt="image" src="https://github.com/user-attachments/assets/b611e9c0-0ddd-4390-880f-97c772c636c4" />
+<img width="923" height="1066" alt="image" src="https://github.com/user-attachments/assets/9a85b3c6-2289-4f1a-88dd-aaf1d1e60e2d" />
 
 ---
 
@@ -246,7 +256,6 @@ Contributions are welcome! Please follow these steps:
 5. Open a Pull Request
 
 ---
-
 ## ⚖️ License
 Distributed under the **MIT License**. See `LICENSE` for more information.
 
