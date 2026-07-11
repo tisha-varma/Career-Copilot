@@ -7,6 +7,7 @@
 [![Groq](https://img.shields.io/badge/LLaMA%203.3-Groq-orange?style=for-the-badge)](https://groq.com/)
 
 ---
+Try here: https://career-copilot-wbkk.onrender.com/
 
 ## 📖 Project Description
 **Career Copilot AI** is a professional-grade career optimization platform that integrates Large Language Models (LLMs) with cloud-native infrastructure to transform static resumes into strategic career assets. 
