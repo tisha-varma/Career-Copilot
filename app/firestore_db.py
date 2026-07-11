@@ -207,3 +207,31 @@ def delete_audit_log(log_id: str) -> bool:
     db = _get_db()
     db.collection("audit_logs").document(log_id).delete()
     return True
+
+
+# ── Feedback Collection ──────────────────────────────────────────────────────
+
+def save_feedback(name: str, email: str, rating: int, comment: str, role: str) -> None:
+    """Save user feedback to Firestore."""
+    db = _get_db()
+    ref = db.collection("feedback").document()
+    
+    ref.set({
+        "id": ref.id,
+        "name": name,
+        "email": email,
+        "rating": rating,
+        "comment": comment,
+        "role": role,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+
+
+def get_all_feedback() -> list[dict]:
+    """Return all feedback entries, sorted newest-first."""
+    db = _get_db()
+    docs = db.collection("feedback").stream()
+    feedback_entries = [doc.to_dict() for doc in docs]
+    feedback_entries.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    return feedback_entries
+

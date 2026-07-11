@@ -499,7 +499,7 @@ async def download_cover_letter(request: Request):
 
 @app.post("/api/feedback")
 async def submit_feedback(request: Request):
-    """Save user feedback to an Excel-compatible CSV file."""
+    """Save user feedback to Firestore."""
     try:
         data = await request.json()
         name = data.get("name", "Anonymous")
@@ -508,23 +508,8 @@ async def submit_feedback(request: Request):
         comment = data.get("comment", "")
         role = get_session_data(request, "role", "N/A")
         
-        file_exists = FEEDBACK_FILE.exists()
-        
-        # Append data to CSV
-        with open(FEEDBACK_FILE, mode='a', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            # Write header if NEW file
-            if not file_exists:
-                writer.writerow(["Timestamp", "Name", "Email", "Rating", "Feedback", "Target Role"])
-            
-            writer.writerow([
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                name,
-                email,
-                rating,
-                comment,
-                role
-            ])
+        from firestore_db import save_feedback
+        save_feedback(name, email, rating, comment, role)
             
         return JSONResponse({
             "success": True, 
@@ -538,11 +523,27 @@ async def submit_feedback(request: Request):
 @app.get("/export-feedback-csv")
 async def export_feedback():
     """Download the feedback CSV file (Admin only)."""
-    if not FEEDBACK_FILE.exists():
+    from firestore_db import get_all_feedback
+    import io
+    feedback = get_all_feedback()
+    if not feedback:
         return JSONResponse({"error": "No feedback collected yet"}, status_code=404)
         
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Timestamp", "Name", "Email", "Rating", "Feedback", "Target Role"])
+    for f in feedback:
+        writer.writerow([
+            f.get("timestamp", ""),
+            f.get("name", ""),
+            f.get("email", ""),
+            f.get("rating", ""),
+            f.get("comment", ""),
+            f.get("role", "")
+        ])
+        
     return Response(
-        content=FEEDBACK_FILE.read_text(encoding="utf-8"),
+        content=output.getvalue(),
         media_type="text/csv",
         headers={
             "Content-Disposition": 'attachment; filename="career_copilot_feedback.csv"'
@@ -582,17 +583,20 @@ async def admin_dashboard(
     # Build UID → user-name map for consistent alias display
     user_map = {u["uid"]: u.get("name", "") for u in users if u.get("uid")}
     
-    # Fetch feedback from CSV
+    # Fetch feedback from Firestore
+    from firestore_db import get_all_feedback
+    raw_feedback = get_all_feedback()
     feedback_entries = []
-    if FEEDBACK_FILE.exists():
-        try:
-            with open(FEEDBACK_FILE, mode='r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                feedback_entries = list(reader)
-                # Sort newest first
-                feedback_entries.reverse()
-        except Exception as e:
-            print(f"[Admin] Error reading feedback: {e}")
+    for f in raw_feedback:
+        # Map to old CSV column names expected by template
+        feedback_entries.append({
+            "Timestamp": f.get("timestamp", "")[:19].replace("T", " "),
+            "Name": f.get("name", ""),
+            "Email": f.get("email", ""),
+            "Rating": f.get("rating", ""),
+            "Feedback": f.get("comment", ""),
+            "Target Role": f.get("role", "")
+        })
 
     return templates.TemplateResponse(
         "admin_dashboard.html",
